@@ -13,7 +13,7 @@ interface AcqSys;
 	method Action button;
 endinterface
 
-(* synthesize *)
+(* synthesize, clock_prefix="clk", reset_prefix="reset_n" *)
 module mkAcqSys(AcqSys);
 	InterruptSender irq <- mkInterruptSender;
 	AvalonSlave#(AvalonAddrSize, AvalonDataSize) avalon <- mkAvalonSlave;
