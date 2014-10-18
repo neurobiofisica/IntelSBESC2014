@@ -27,7 +27,7 @@ module mkInterruptSender(InterruptSender);
 	endmethod
 
 	interface InterruptSenderWires irqWires;
-		method Bit#(1) ins = irqEnabled && irqSet[1] ? 1 : 0;
+		method Bit#(1) ins = irqEnabled && irqSet[0] ? 1 : 0;
 	endinterface
 endmodule
 
