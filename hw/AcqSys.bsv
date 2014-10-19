@@ -22,11 +22,8 @@ module mkAcqSys(AcqSys);
 	Reg#(Bit#(1)) btnreg <- mkReg(1);
 	Reg#(Bit#(1)) btnprevreg <- mkReg(1);
 
-	Put#(AvalonRequest#(AvalonAddrSize, AvalonDataSize)) reqDbg <- mkJtagPut("REQ", mkSizedFIFOF(2048));
-
 	rule handle_cmd;
 		let cmd <- avalon.busClient.request.get;
-		reqDbg.put(cmd);
 		case (cmd) matches
 			tagged AvalonRequest{addr: 0, data: .x, command: Write}:
 				irq.enabled <= x != 0;
