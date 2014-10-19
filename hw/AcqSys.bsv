@@ -52,7 +52,14 @@ module mkAcqSys(AcqSys);
 		case (cmd) matches
 			// Register @0x00: Enable/disable acquisition.
 			tagged AvalonRequest{addr: 0, data: .x, command: Write}:
-				acqStarted <= x != 0;
+				action
+					acqStarted <= x != 0;
+					(*split*)
+					if(x == 0) begin
+						led.errorClear;
+						acqFifo.clear;
+					end
+				endaction
 			tagged AvalonRequest{addr: 0, data: .*, command: Read}:
 				avalon.busClient.response.put(acqStarted ? 1 : 0);
 			// Register @0x04: Read flags from the FIFO. MSB is zero if data is valid.

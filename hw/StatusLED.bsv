@@ -20,6 +20,7 @@ endinterface
 interface StatusLED#(numeric type errports);
 	interface StatusLEDWires wires;
 	interface Vector#(errports, StatusErrSet) errorCondition;
+	method Action errorClear;
 endinterface
 
 module mkStatusLED#(Bit#(NumInputs) syncedIn, Bool counterTicked) (StatusLED#(errports));
@@ -28,7 +29,7 @@ module mkStatusLED#(Bit#(NumInputs) syncedIn, Bool counterTicked) (StatusLED#(er
 	Bool isLedBlink = ledBlinkCounter[valueOf(Log2ErrorBlink)-1] == 1'b1;
 
 	let errPorts = valueOf(errports);
-	Array#(Reg#(Bool)) errorCond <- mkCReg(errPorts, False);
+	Array#(Reg#(Bool)) errorCond <- mkCReg(errPorts+1, False);
 
 	Array#(Reg#(Bit#(NumInputs))) ledFlags <- mkCReg(2, 0);
 	Reg#(Bit#(NumLeds)) ledReg <- mkReg(~0);
@@ -45,7 +46,7 @@ module mkStatusLED#(Bit#(NumInputs) syncedIn, Bool counterTicked) (StatusLED#(er
 			ledBlinkCounter <= ledBlinkCounter + 1;
 			ledReg <= errorCond[0] ?
 				(isLedBlink ? 0 : ~0) :
-				~extend(ledFlags[0]);
+				extend(ledFlags[0]);
 			ledFlags[0] <= 0;
 		end
 	endrule
@@ -59,6 +60,10 @@ module mkStatusLED#(Bit#(NumInputs) syncedIn, Bool counterTicked) (StatusLED#(er
 	endfunction
 
 	interface Vector errorCondition = genWith(genStatusErrSet);
+
+	method Action errorClear;
+		errorCond[errPorts] <= False;
+	endmethod
 
 	interface StatusLEDWires wires;
 		method Bit#(NumLeds) led = ledReg;
