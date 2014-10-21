@@ -106,8 +106,9 @@ module mkAcqSys(AcqSys);
 	(* fire_when_enabled *)
 	rule timestampUpdate(acqStarted && cycleCounter.ticked);
 		let flags = asReg(channelFlags[0]);
+		Bit#(TSub#(NumFlags,1)) truncatedFlags = truncate(flags);
 		(*split*)
-		if(flags != 0) begin
+		if(truncatedFlags != 0) begin
 			(*split*)
 			if(acqFifo.notFull) begin
 				acqFifo.enq(tuple2(flags, timestamp));
