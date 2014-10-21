@@ -1,4 +1,5 @@
 import FIFOF::*;
+import BRAM::*;
 import Connectable::*;
 import SysConfig::*;
 import AsyncPulseSync::*;
@@ -6,12 +7,6 @@ import StatusLED::*;
 import CycleCounter::*;
 import AvalonSlave::*;
 import InterruptSender::*;
-
-typedef 3  AvalonAddrSize;
-typedef 32 AvalonDataSize;
-
-typedef Bit#(AvalonDataSize) Word;
-typedef Word TimeStamp;
 
 typedef Tuple2#(Bit#(NumFlags), TimeStamp) AcqFifoContents;
 
@@ -25,7 +20,7 @@ interface AcqSys;
 	(* prefix="CH" *)
 	interface Vector#(NumInputs, AcqIn) inputs;
 	(* prefix="", result="STIM" *)
-	method Bit#(StimSize) stimuli;
+	method Stim stimuli;
 endinterface
 
 (* synthesize, clock_prefix="clk", reset_prefix="reset_n" *)
@@ -46,51 +41,72 @@ module mkAcqSys(AcqSys);
 
 	FIFOF#(AcqFifoContents) acqFifo <- mkSizedFIFOF(2*valueOf(NumFlags));
 	RWire#(AcqFifoContents) acqFifoFirst <- mkRWire;
-	FIFOF#(Bit#(StimSize)) stimFifo <- mkFIFOF;
+	FIFOF#(Stim) stimFifo <- mkFIFOF;
+
+	BRAM2Port#(StimMemAddr, Stim) stimMem <- mkBRAM2Server(defaultValue);
+	FIFOF#(void) stimMemPendRead <- mkFIFOF;  // enforce order on responses
 
 	rule peekAcqFifo;
 		acqFifoFirst.wset(acqFifo.first);
 	endrule
 
-	rule handleCmd;
+	rule answerStimMemRead;
+		let resp <- stimMem.portB.response.get;
+		avalon.busClient.response.put(extend(resp));
+		stimMemPendRead.deq;
+	endrule
+
+	rule handleCmd(!stimMemPendRead.notEmpty);
 		let cmd <- avalon.busClient.request.get;
 		(*split*)
-		case (cmd) matches
-			// Register @0x00: Enable/disable acquisition.
-			tagged AvalonRequest{addr: 0, data: .x, command: Write}:
-				action
-					acqStarted <= x != 0;
-					(*split*)
-					if(x == 0) begin
-						led.errorClear;
-						acqFifo.clear;
-						stimFifo.clear;
-					end
-				endaction
-			tagged AvalonRequest{addr: 0, data: .*, command: Read}:
-				avalon.busClient.response.put(acqStarted ? 1 : 0);
-			// Register @0x04: Read flags from the FIFO. MSB is zero if data is valid.
-			tagged AvalonRequest{addr: 1, data: .*, command: Read}:
-				action
-					Bit#(NumFlags) flags = tpl_1(fromMaybe(tuple2(0,0), acqFifoFirst.wget));
-					Bit#(TSub#(AvalonDataSize, 1)) extFlags = extend(flags);
-					Bit#(1) invalidFlag = isValid(acqFifoFirst.wget) ? 0 : 1;
-					avalon.busClient.response.put({invalidFlag, extFlags});
-				endaction
-			// Register @0x08: Read timestamp from the FIFO. WARNING: may block.
-			tagged AvalonRequest{addr: 2, data: .*, command: Read}:
-				action
-					TimeStamp tstamp = tpl_2(acqFifo.first);
-					avalon.busClient.response.put(tstamp);
-					acqFifo.deq;
-				endaction
-			// Register @0x0c: Write sample to stimuli FIFO. WARNING: may block.
-			tagged AvalonRequest{addr: 3, data: .x, command: Write}:
-				stimFifo.enq(truncate(x));
-			// Deal with reads to addresses not listed above
-			tagged AvalonRequest{addr: .*, data: .*, command: Read}:
-				avalon.busClient.response.put(32'hBADC0FFE);
-		endcase
+		if (cmd.addr[stimMemAddrSize] == 1'b0) begin
+			(*split*)
+			case (cmd) matches
+				// Register @0x00: Enable/disable acquisition.
+				tagged AvalonRequest{addr: 0, data: .x, command: Write}:
+					action
+						acqStarted <= x != 0;
+						(*split*)
+						if(x == 0) begin
+							led.errorClear;
+							acqFifo.clear;
+							stimFifo.clear;
+						end
+					endaction
+				tagged AvalonRequest{addr: 0, data: .*, command: Read}:
+					avalon.busClient.response.put(acqStarted ? 1 : 0);
+				// Register @0x04: Read flags from the FIFO. MSB is zero if data is valid.
+				tagged AvalonRequest{addr: 1, data: .*, command: Read}:
+					action
+						Bit#(NumFlags) flags = tpl_1(fromMaybe(tuple2(0,0), acqFifoFirst.wget));
+						Bit#(TSub#(AvalonDataSize, 1)) extFlags = extend(flags);
+						Bit#(1) invalidFlag = isValid(acqFifoFirst.wget) ? 0 : 1;
+						avalon.busClient.response.put({invalidFlag, extFlags});
+					endaction
+				// Register @0x08: Read timestamp from the FIFO. WARNING: may block.
+				tagged AvalonRequest{addr: 2, data: .*, command: Read}:
+					action
+						TimeStamp tstamp = tpl_2(acqFifo.first);
+						avalon.busClient.response.put(tstamp);
+						acqFifo.deq;
+					endaction
+					// Register @0x0c: Write sample to stimuli FIFO. WARNING: may block.
+				tagged AvalonRequest{addr: 3, data: .x, command: Write}:
+					stimFifo.enq(truncate(x));
+				// Deal with reads to addresses not listed above
+				tagged AvalonRequest{addr: .*, data: .*, command: Read}:
+					avalon.busClient.response.put(32'hBADC0FFE);
+			endcase
+		end else begin
+			if(cmd.command == Read)
+				stimMemPendRead.enq(?);
+			stimMem.portB.request.put(BRAMRequest{
+				write: cmd.command == Write,
+				address: truncate(cmd.addr),
+				datain: truncate(cmd.data),
+				responseOnWrite: False
+			});
+		end
 	endrule
 
 	(* fire_when_enabled *)
@@ -125,8 +141,7 @@ module mkAcqSys(AcqSys);
 		channelFlags[1] <= channelFlags[1] | flagIn;
 	endrule
 
-	method Bit#(StimSize) stimuli = 
-		acqStarted ? stimFifo.first : 0;
+	method Stim stimuli = acqStarted ? stimFifo.first : 0;
 
 	interface irqWires = irqSender(acqFifo.notEmpty);
 	interface avalonWires = avalon.slaveWires;
