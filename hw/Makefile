@@ -6,4 +6,4 @@ all:
 	cp mkAcqSys.v PCIe_AvalonBSV/synthesis/submodules/
 clean:
 	rm -rf obj
-	rm -f *.v *.sched
+	rm -f mkAcqSys.v *.sched
