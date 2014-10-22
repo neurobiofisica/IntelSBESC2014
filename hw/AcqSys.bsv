@@ -208,7 +208,7 @@ module mkAcqSys(AcqSys);
 	endrule
 
 	(* fire_when_enabled *)
-	rule queryStimMem(wordMatched && stimRate.ticked);
+	rule queryStimMem(wordMatched);
 		stimMem.portA.request.put(BRAMRequest{
 			write: False,
 			address: truncate(stimIndex),
