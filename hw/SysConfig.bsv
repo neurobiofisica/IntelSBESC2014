@@ -6,6 +6,9 @@ typedef 11 StimMemAddrSize;
 typedef 100    CyclesResolution;
 typedef 200000 CyclesStimRate;
 
+Integer defaultWordPeriod = 200000;
+Integer chWord = 0; // input channel on which words are matched
+
 typedef 15 Log2LedPersistence;
 typedef 7  Log2ErrorBlink;
 
