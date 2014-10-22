@@ -32,7 +32,7 @@ module mkAcqSys(AcqSys);
 	Vector#(NumInputs, SyncPulseIfc) inSyncs <- replicateM(mkAsyncPulseSync);
 	Bit#(NumInputs) syncedIn = fromPulseVector(inSyncs);
 
-	RWire#(Stim) stimOut <- mkRWire;
+	Array#(Reg#(Stim)) stimOut <- mkCReg(3, 0);
 	CycleCounter#(CyclesStimRate) stimRate <- mkCycleCounter;
 	Reg#(Bool) wordMatched <- mkReg(False);
 	Bit#(NumFlags) flagIn = {wordMatched?1'b1:1'b0, stimRate.ticked?1'b1:1'b0, syncedIn};
@@ -51,9 +51,7 @@ module mkAcqSys(AcqSys);
 	FIFOF#(void) stimMemPendRead <- mkFIFOF;  // to enforce order on responses
 	Reg#(Bit#(TAdd#(StimMemAddrSize, 1))) stimMemSize <- mkReg(0);
 	Reg#(Bit#(TAdd#(StimMemAddrSize, 1))) stimIndex <- mkReg(0);
-
 	FIFOF#(Stim) stimFromMem <- mkBypassFIFOF;
-	RWire#(Stim) stimFromMemFirst <- mkRWire;
 
 	ProgrammableCycleCounter#(AvalonDataSize) wordBoundary <-
 		mkProgrammableCycleCounter(fromInteger(defaultWordPeriod));
@@ -66,11 +64,6 @@ module mkAcqSys(AcqSys);
 	(* fire_when_enabled *)
 	rule peekAcqFifo;
 		acqFifoFirst.wset(acqFifo.first);
-	endrule
-
-	(* fire_when_enabled *)
-	rule peekStimFromMem;
-		stimFromMemFirst.wset(stimFromMem.first);
 	endrule
 
 	(* fire_when_enabled *)
@@ -97,6 +90,7 @@ module mkAcqSys(AcqSys);
 							stimFifo.clear;
 							word[1] <= 0;
 							stimMemSize <= 0;
+							stimOut[2] <= 0;
 						end
 					endaction
 				tagged AvalonRequest{addr: 0, data: .*, command: Read}:
@@ -152,17 +146,20 @@ module mkAcqSys(AcqSys);
 	endrule
 
 	(* fire_when_enabled *)
-	rule stimLoad(acqStarted && stimRate.ticked);
-		(*split*)
-		if(stimFromMem.notEmpty) begin
-			stimFromMem.deq;
-		end
+	rule stimLoadFifo(acqStarted && stimRate.ticked);
 		(*split*)
 		if(stimFifo.notEmpty) begin
+			stimOut[0] <= stimFifo.first;
 			stimFifo.deq;
 		end else begin
 			led.errorCondition[1].set;
 		end
+	endrule
+
+	(* fire_when_enabled *)
+	rule stimLoadMem(acqStarted && stimRate.ticked);
+		stimOut[1] <= stimFromMem.first;
+		stimFromMem.deq;
 	endrule
 
 	(* fire_when_enabled *)
@@ -219,19 +216,7 @@ module mkAcqSys(AcqSys);
 		stimIndex <= stimIndex + 1;
 	endrule
 
-	(* fire_when_enabled *)
-	rule feedStimOut;
-		stimOut.wset(fromMaybe(stimFifo.first, stimFromMemFirst.wget));
-	endrule
-
-	(* fire_when_enabled, no_implicit_conditions *)
-	rule checkStimOutValid(acqStarted);
-		if (!isValid(stimOut.wget)) begin
-			led.errorCondition[2].set;
-		end
-	endrule
-
-	method Stim stimuli = fromMaybe(0, stimOut.wget);
+	method Stim stimuli = stimOut[0];
 
 	interface irqWires = irqSender(acqFifo.notEmpty);
 	interface avalonWires = avalon.slaveWires;
