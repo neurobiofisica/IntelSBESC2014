@@ -154,6 +154,10 @@ module mkAcqSys(AcqSys);
 	(* fire_when_enabled *)
 	rule stimLoad(acqStarted && stimRate.ticked);
 		(*split*)
+		if(stimFromMem.notEmpty) begin
+			stimFromMem.deq;
+		end
+		(*split*)
 		if(stimFifo.notEmpty) begin
 			stimFifo.deq;
 		end else begin
