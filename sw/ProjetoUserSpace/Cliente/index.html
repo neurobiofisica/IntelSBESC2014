@@ -11,22 +11,29 @@
         <!-- websocket to get the data -->
         <script>
 var NChan = 8;
-var LenBuffer = 100;
+var LenBuffer = 10;
+var stimLen = 1.4;
 
 $(function () {
 
     function ProcessData() {
         // Attributes
         this.last_timestamp = Array.apply(null, new Array(NChan)).map(Number.prototype.valueOf,-1);
+        this.first_timestamp = -1;
         this.isi = Array.apply(null, new Array(NChan)).map(Number.prototype.valueOf,0);
         this.cbuffer = new Array()
         this.len = Array.apply(null, new Array(NChan)).map(Number.prototype.valueOf,0);
-        this.graficos = new Array()
+        this.graficos = new Array();
+        this.rasters = new Array();
+        this.datarasters = new Array();
 
-        this.options = {
+        this.stimCounter = 0;
+
+        this.optionsgraficos = {
             series: {
                 lines: { show: true },
-                points: { show: true }
+                points: { show: true },
+                color: "#000000",
             },
             yaxis: {
                 min: 0,
@@ -34,20 +41,47 @@ $(function () {
             },
         };
 
+        this.optionsrasters = {
+            series: {
+                lines: { show: true },
+                points: { show: true, fill:true, fillColor:"#000000", },
+                color: "#000000",
+            },
+            xaxis: {
+                min: 0,
+                max: stimLen,
+            },
+/*            yaxis: {
+                min: 0,
+                max: 100,
+            },*/
+        };
+
         this.start = function() {
             for (var i=0; i<NChan; i++) {
                 this.cbuffer[i] = new CBuffer(LenBuffer);
-                this.graficos[i] = $.plot("#grafico" + String(i), [ [0,0] ], this.options);
+                this.datarasters[i] = new Array();
+                this.graficos[i] = $.plot("#grafico" + String(i), [ [0,0] ], this.optionsgraficos);
+                this.rasters[i] = $.plot("#raster" + String(i), [ [0,0] ], this.optionsrasters);
             };
         };
 
         this.sendData = function (self, channel) {
             var d1 = new $.Deferred();
 
-            var data = [ self.cbuffer[channel].toArray().slice(0,self.len[channel]) ]
-            self.graficos[channel].setData(data)
+            var datagraficos = [ self.cbuffer[channel].toArray().slice(0,self.len[channel]) ]
+            self.graficos[channel].setData(datagraficos);
             self.graficos[channel].setupGrid();
             self.graficos[channel].draw();
+
+            var relTS = self.cbuffer[channel].last()[0] - self.first_timestamp;
+            console.log(relTS);
+            self.stimCounter = Math.floor( relTS / stimLen)
+            var dataraster_now = [ [relTS - (self.stimCounter*stimLen) , self.stimCounter ] ];
+            self.datarasters[channel] = self.datarasters[channel].concat([ dataraster_now ]);
+            self.rasters[channel].setData(self.datarasters[channel]);
+            self.rasters[channel].setupGrid();
+            self.rasters[channel].draw();
         };
 
         this.to_buffer = function (channel, timestamp, isi) {
@@ -61,6 +95,9 @@ $(function () {
         this.update = function (flags, timestamp) {
             var d1 =  new $.Deferred();
             console.log("Data received");
+            if (this.first_timestamp == -1) {
+                this.first_timestamp = timestamp
+            };
 
             for (var i=0; i<=NChan; i++) {
                 if ( flags & (1 << i) ) {
@@ -119,19 +156,49 @@ $(function () {
         <p>Texto de teste</p>
         <div id="grafico0" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
+        <div id="raster0" style="width:90%; height:300px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <br />
+
         <div id="grafico1" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
+        <div id="raster1" style="width:90%; height:300px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <br />
+
         <div id="grafico2" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
+        <div id="raster2" style="width:90%; height:300px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <br />
+
         <div id="grafico3" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
+        <div id="raster3" style="width:90%; height:300px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <br />
+
         <div id="grafico4" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
+        <div id="raster4" style="width:90%; height:300px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <br />
+
         <div id="grafico5" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
+        <div id="raster5" style="width:90%; height:300px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <br />
+
         <div id="grafico6" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
+        <div id="raster6" style="width:90%; height:300px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <br />
+
         <div id="grafico7" style="width:90%; height:100px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <div id="raster7" style="width:90%; height:300px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <!--canvas id="plot0" height="200" style="border: 1px solid
 #000000;"></canvas-->
