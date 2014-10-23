@@ -4,7 +4,7 @@ typedef 8 StimSize;
 typedef 11 StimMemAddrSize;
 
 typedef 100    CyclesResolution;
-typedef 200000 CyclesStimRate;
+typedef 10000000 CyclesStimRate;
 
 Integer defaultWordPeriod = 200000;
 Integer chWord = 0; // input channel on which words are matched
