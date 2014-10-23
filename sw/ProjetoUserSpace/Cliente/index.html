@@ -1,0 +1,140 @@
+<html>
+    <head>
+        <title>Teste cliente</title>
+    </head>
+    <body>
+        <script src="d3.min.js"></script>
+        <script src="jquery-2.1.1.min.js"></script>
+        <script src="flot/jquery.flot.js"></script>
+        <script src="cbuffer.js"></script>
+
+        <!-- websocket to get the data -->
+        <script>
+var NChan = 8;
+var LenBuffer = 100;
+
+$(function () {
+
+    function ProcessData() {
+        // Attributes
+        this.last_timestamp = Array.apply(null, new Array(NChan)).map(Number.prototype.valueOf,-1);
+        this.isi = Array.apply(null, new Array(NChan)).map(Number.prototype.valueOf,0);
+        this.cbuffer = new Array()
+        this.len = Array.apply(null, new Array(NChan)).map(Number.prototype.valueOf,0);
+        this.graficos = new Array()
+
+        this.options = {
+            series: {
+                lines: { show: true },
+                points: { show: true }
+            },
+            yaxis: {
+                min: 0,
+                max: 2,
+            },
+        };
+
+        this.start = function() {
+            for (var i=0; i<NChan; i++) {
+                this.cbuffer[i] = new CBuffer(LenBuffer);
+                this.graficos[i] = $.plot("#grafico" + String(i), [ [0,0] ], this.options);
+            };
+        };
+
+        this.sendData = function (self, channel) {
+            var d1 = new $.Deferred();
+
+            var data = [ self.cbuffer[channel].toArray().slice(0,self.len[channel]) ]
+            self.graficos[channel].setData(data)
+            self.graficos[channel].setupGrid();
+            self.graficos[channel].draw();
+        };
+
+        this.to_buffer = function (channel, timestamp, isi) {
+            this.cbuffer[channel].push([timestamp,isi]);
+            if (this.len[channel] < LenBuffer) {
+                this.len[channel]++;
+            }
+        };
+
+        // Methods
+        this.update = function (flags, timestamp) {
+            var d1 =  new $.Deferred();
+            console.log("Data received");
+
+            for (var i=0; i<=NChan; i++) {
+                if ( flags & (1 << i) ) {
+                    if (this.last_timestamp[i] == -1) {
+                        this.last_timestamp[i] = timestamp;
+                    }
+                    this.isi[i] = timestamp - this.last_timestamp[i];
+                    this.last_timestamp[i] = timestamp;
+
+                    //Gambi
+                    var self = this;
+                    var f = this.sendData;
+
+                    $.when( d1 ).done( function (v1) {
+                        f(self, i);
+                    });
+                    d1.resolve(
+                        this.to_buffer(i, timestamp, this.isi[i])
+                    );
+                };
+            };
+        };
+
+    };
+
+    var processData = new ProcessData();
+    processData.start();
+
+    socket = new WebSocket("ws://192.168.0.1:8888/socket");
+
+    socket.onopen = function (event) {
+        console.log("Web Socket opened");
+    };
+
+    socket.onmessage = function (event) {
+        var data = JSON.parse(event.data);
+        var flags = data[0];
+        var timestamp = data[1];
+        processData.update(flags,timestamp);
+    };
+
+    socket.onclose = function() {
+        console.log("Web Socket closed");
+    };
+
+//    var canvas = document.getElementById('plot0');
+//        canvas.width = 0.9*window.innerWidth;
+
+//    var canvas = document.getElementById('grafico0');
+  //      canvas.width = 0.9*window.innerWidth;
+    //    canvas.height = 100;
+});
+
+
+        </script>
+        <p>Texto de teste</p>
+        <div id="grafico0" style="width:90%; height:100px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <div id="grafico1" style="width:90%; height:100px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <div id="grafico2" style="width:90%; height:100px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <div id="grafico3" style="width:90%; height:100px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <div id="grafico4" style="width:90%; height:100px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <div id="grafico5" style="width:90%; height:100px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <div id="grafico6" style="width:90%; height:100px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <div id="grafico7" style="width:90%; height:100px; box-sizing:
+border-box; border: 1px solid #000000;"></div>
+        <!--canvas id="plot0" height="200" style="border: 1px solid
+#000000;"></canvas-->
+
+    </body>
+</html>
