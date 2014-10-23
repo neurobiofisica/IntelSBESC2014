@@ -26,9 +26,10 @@
 
 // Defines for the AcqSys Interface
 // We are considering words of 4 bytes
-#define ACQ_STARTED     0x0
-#define ACQ_CHANNELFLG  0x4
-#define ACQ_TIMESTAMP   0x8
+#define ACQ_STARTED     0x00
+#define ACQ_CHANNELFLG  0x04
+#define ACQ_TIMESTAMP   0x08
+#define ACQ_STIM        0x0c
 
 // Invalid flag from channels (empty FIFO)
 #define INVALID_FLAG    0x80000000
@@ -36,6 +37,10 @@
 static void *acq_base;
 
 static uint8_t n_devices = 0;
+
+static uint8_t stim = 0x80;
+
+static int8_t dir = 1;
 
 
 // Auxiliary function
@@ -61,7 +66,24 @@ static int irq_handler(unsigned irq, void *cookie_) {
 
     // Verifies if the interruption is from our hardware
     if (flags != INVALID_FLAG) {
-        rt_printk("pcie_interrupt_driver: Interruption arrived from channel %x\n", flags);
+        if(flags != 0x100)
+            rt_printk("pcie_interrupt_driver: Interruption arrived from channel 0x%x\n", flags);
+
+        if(flags & 0x100) {
+            if (dir == 1)
+               stim = stim >> 1;
+            else if (dir == -1)
+                stim = stim << 1;
+            if (stim == 0x01) { // Threw the bit away
+                dir = -1;
+//                stim = 0x03;
+            }
+            if (stim == 0x80) {
+                dir = 1;
+  //              stim = 0xc0;
+            }
+            iowrite32(stim, acq_base + ACQ_STIM);
+        }
 
         // Read timestamp (Reset is a side-effect)
         timestamp = ioread32(acq_base + ACQ_TIMESTAMP);
@@ -117,8 +139,8 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
     resource = pci_resource_start(dev,0);
     acq_base = ioremap_nocache(resource + ACQSYS + ACQ_STARTED, 0xc);
 
-    // Enable Acquisition
-    iowrite32(0x1, acq_base + ACQ_STARTED);
+    // Load initial stimulus
+    iowrite32(stim, acq_base + ACQ_STIM);
 
     // Read vendor ID
     rt_printk("pcie_interrupt_driver: Found Vendor id: 0x%0.4x\n", dev->vendor);
@@ -133,6 +155,9 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
         rt_printk("pcie_interrupt_driver: request_irq failed!");
         return retval;
     }
+
+    // Enable Acquisition
+    iowrite32(0x1, acq_base + ACQ_STARTED);
 
     rt_startup_irq(dev->irq);
 
@@ -201,6 +226,7 @@ static int pcie_interrupt_init(void) {
 static void pcie_interrupt_exit(void) {
     // Destroy FIFOs
     rtf_destroy(FIFO_DAT);
+    rtf_destroy(FIFO_CMD);
 
     // Unregister PCI driver
     pci_unregister_driver(&pci_driver);
