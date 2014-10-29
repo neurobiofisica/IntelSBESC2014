@@ -30,6 +30,10 @@
 #define ACQ_CHANNELFLG  0x04
 #define ACQ_TIMESTAMP   0x08
 #define ACQ_STIM        0x0c
+#define ACQ_BOUNDPERIOD 0x10
+#define ACQ_MATCHWORD   0x14
+#define ACQ_BRIEFSTIMSZ 0x18
+#define ACQ_BRIEFSTIM   0x800    
 
 // Invalid flag from channels (empty FIFO)
 #define INVALID_FLAG    0x80000000
