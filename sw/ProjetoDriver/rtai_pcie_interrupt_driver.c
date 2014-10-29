@@ -162,6 +162,9 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
 
     // Enable Acquisition
     iowrite32(0x1, acq_base + ACQ_STARTED);
+    
+    // Bin boundary period = 200000 * 10ns
+    iowrite32(200000, acq_base + ACQ_BOUNDPERIOD);
 
     rt_startup_irq(dev->irq);
 

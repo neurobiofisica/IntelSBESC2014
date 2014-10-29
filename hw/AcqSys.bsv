@@ -53,7 +53,7 @@ module mkAcqSys(AcqSys);
 	Reg#(Bit#(TAdd#(StimMemAddrSize, 1))) stimIndex <- mkReg(0);
 	FIFOF#(Stim) stimFromMem <- mkBypassFIFOF;
 
-	ProgrammableCycleCounter#(AvalonDataSize) wordBoundary <-
+	ProgrammableCycleCounter#(AvalonDataSize) binBoundary <-
 		mkProgrammableCycleCounter(fromInteger(defaultWordPeriod));
 	Array#(Reg#(Bit#(1))) wordBit <- mkCReg(2, 0);
 	Array#(Reg#(Word)) word <- mkCReg(2, 0);
@@ -113,11 +113,11 @@ module mkAcqSys(AcqSys);
 				// Register @0x0c: Write sample to stimuli FIFO. WARNING: may block.
 				tagged AvalonRequest{addr: 3, data: .x, command: Write}:
 					stimFifo.enq(truncate(x));
-				// Register @0x10: Read/write word boundary period
+				// Register @0x10: Read/write bin boundary period
 				tagged AvalonRequest{addr: 4, data: .x, command: Write}:
-					wordBoundary.period <= x;
+					binBoundary.period <= x;
 				tagged AvalonRequest{addr: 4, data: .*, command: Read}:
-					avalon.busClient.response.put(wordBoundary.period);
+					avalon.busClient.response.put(binBoundary.period);
 				// Register @0x14: Read/write word to match
 				tagged AvalonRequest{addr: 5, data: .x, command: Write}:
 					wordToMatch <= x;
@@ -185,7 +185,7 @@ module mkAcqSys(AcqSys);
 	endrule
 
 	(* fire_when_enabled *)
-	rule wordUpdate(acqStarted && !wordMatched && wordBoundary.ticked);
+	rule wordUpdate(acqStarted && !wordMatched && binBoundary.ticked);
 		let b = asReg(wordBit[0]);
 		let updword = (word[0] << 1) | extend(b);
 		if (updword == wordToMatch) begin
