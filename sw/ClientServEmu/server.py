@@ -53,7 +53,7 @@ application = web.Application([
 ])
 
 if __name__ == '__main__':
-    application.listen(7000)
+    application.listen(8888)
     ioloop.PeriodicCallback(send_data_test, 3).start()
     ioloop.PeriodicCallback(send_stim_test, 4000).start()
     ioloop.IOLoop.instance().start()

@@ -47,7 +47,7 @@ extractStim json = case dicFromJson json of
 
 socket : Signal (Maybe Json.Value)
 socket = Json.fromString <~
-    (WebSocket.connect "ws://200.136.246.91:7000/socket"
+    (WebSocket.connect "ws://192.168.0.1:8888/socket"
     <| constant "")
 
 timesFromData : Int -> DataList -> [(Bool,Float)]
