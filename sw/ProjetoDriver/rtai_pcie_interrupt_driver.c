@@ -32,7 +32,8 @@
 #define ACQ_STIM        0x0c
 #define ACQ_BOUNDPERIOD 0x10
 #define ACQ_MATCHWORD   0x14
-#define ACQ_BRIEFSTIMSZ 0x18
+#define ACQ_WORDMASK    0x18
+#define ACQ_BRIEFSTIMSZ 0x1c
 #define ACQ_BRIEFSTIM   0x800    
 
 // Invalid flag from channels (empty FIFO)
@@ -125,7 +126,7 @@ static struct pci_driver pci_driver = {
 
 static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
     unsigned long resource;
-    int retval;
+    int i, retval;
 
     if(++n_devices > 1)
         return -EOVERFLOW;
@@ -165,7 +166,21 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
     
     // Bin boundary period = 200000 * 10ns
     iowrite32(200000, acq_base + ACQ_BOUNDPERIOD);
-
+    
+    // Word to match
+    iowrite32(219, acq_base + ACQ_MATCHWORD);
+    
+    // Word valid-bit mask
+    iowrite32(0xFF, acq_base + ACQ_WORDMASK);
+    
+    // Write a sample brief stimulus
+    for(i = 0; i < 1024; i++)
+        iowrite(((i&1)==0) ? 0x01 : 0x80, acq_base + ACQ_BRIEFSTIM + i);
+		
+    // Brief stimulus size
+    // Note: setting this to a value != 0 activates the word matcher
+    iowrite32(1024, acq_base + ACQ_BRIEFSTIMSZ);
+		
     rt_startup_irq(dev->irq);
 
     return 0;
