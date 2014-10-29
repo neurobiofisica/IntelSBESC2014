@@ -13,6 +13,7 @@
 var NChan = 8;
 var LenBuffer = 10;
 var stimLen = 1.4;
+var NLinesRaster = 40;
 
 $(function () {
 
@@ -35,26 +36,26 @@ $(function () {
                 points: { show: true },
                 color: "#000000",
             },
-            yaxis: {
+            /*yaxis: {
                 min: 0,
                 max: 2,
-            },
+            },*/
         };
 
         this.optionsrasters = {
             series: {
-                lines: { show: true },
-                points: { show: true, fill:true, fillColor:"#000000", },
+                lines: { show: false },
+                points: { show: true, symbol: "circle", radius:1, fill:true, fillColor:"#000000", },
                 color: "#000000",
             },
             xaxis: {
                 min: 0,
                 max: stimLen,
             },
-/*            yaxis: {
+            yaxis: {
                 min: 0,
-                max: 100,
-            },*/
+                max: NLinesRaster,
+            },
         };
 
         this.start = function() {
@@ -68,20 +69,28 @@ $(function () {
 
         this.sendData = function (self, channel) {
             var d1 = new $.Deferred();
+            var flag = false;
 
             var datagraficos = [ self.cbuffer[channel].toArray().slice(0,self.len[channel]) ]
-            self.graficos[channel].setData(datagraficos);
-            self.graficos[channel].setupGrid();
-            self.graficos[channel].draw();
+            //self.graficos[channel].setData(datagraficos);
+            //self.graficos[channel].setupGrid();
+            //self.graficos[channel].draw();
 
             var relTS = self.cbuffer[channel].last()[0] - self.first_timestamp;
-            console.log(relTS);
-            self.stimCounter = Math.floor( relTS / stimLen)
-            var dataraster_now = [ [relTS - (self.stimCounter*stimLen) , self.stimCounter ] ];
-            self.datarasters[channel] = self.datarasters[channel].concat([ dataraster_now ]);
-            self.rasters[channel].setData(self.datarasters[channel]);
-            self.rasters[channel].setupGrid();
-            self.rasters[channel].draw();
+            if (Math.floor( relTS / stimLen) != self.stimCounter) {
+                flag=true;
+            };
+            self.stimCounter = Math.floor( relTS / stimLen);
+            if (self.stimCounter <= NLinesRaster) {
+                var dataraster_now = [ [relTS - (self.stimCounter*stimLen) , self.stimCounter ] ];
+                self.datarasters[channel] = self.datarasters[channel].concat([ dataraster_now ]);
+                if (flag == true) {
+                    self.rasters[channel].setData(self.datarasters[channel]);
+                    //self.rasters[channel].setupGrid();
+                    self.rasters[channel].draw();
+                    flag=false;
+                };
+            };
         };
 
         this.to_buffer = function (channel, timestamp, isi) {
@@ -94,7 +103,6 @@ $(function () {
         // Methods
         this.update = function (flags, timestamp) {
             var d1 =  new $.Deferred();
-            console.log("Data received");
             if (this.first_timestamp == -1) {
                 this.first_timestamp = timestamp
             };
@@ -153,49 +161,56 @@ $(function () {
 
 
         </script>
-        <p>Texto de teste</p>
+        <p>Channel 0</p>
         <div id="grafico0" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <div id="raster0" style="width:90%; height:300px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <br />
 
+        <p>Channel 1</p>
         <div id="grafico1" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <div id="raster1" style="width:90%; height:300px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <br />
 
+        <p>Channel 2</p>
         <div id="grafico2" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <div id="raster2" style="width:90%; height:300px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <br />
 
+        <p>Channel 3</p>
         <div id="grafico3" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <div id="raster3" style="width:90%; height:300px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <br />
 
+        <p>Channel 4</p>
         <div id="grafico4" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <div id="raster4" style="width:90%; height:300px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <br />
 
+        <p>Channel 5</p>
         <div id="grafico5" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <div id="raster5" style="width:90%; height:300px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <br />
 
+        <p>Channel 6</p>
         <div id="grafico6" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <div id="raster6" style="width:90%; height:300px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <br />
 
+        <p>Channel 7</p>
         <div id="grafico7" style="width:90%; height:100px; box-sizing:
 border-box; border: 1px solid #000000;"></div>
         <div id="raster7" style="width:90%; height:300px; box-sizing:

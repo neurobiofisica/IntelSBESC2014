@@ -12,11 +12,12 @@ class TornadoRecv(tornado.websocket.WebSocketHandler):
         print "Web socket opened"
 
     def process(self, data):
-        print "Sending data to client... %s"%data
+        #print "Sending data to client... %s"%data
         self.write_message(data)
 
     def on_message(self, message):
-        print "Message received %s"%message
+        #print "Message received %s"%message
+        pass
 
     def on_close(self):
         print "Web socket closed"

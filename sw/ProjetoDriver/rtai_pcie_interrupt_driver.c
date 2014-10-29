@@ -38,7 +38,7 @@ static void *acq_base;
 
 static uint8_t n_devices = 0;
 
-static uint8_t stim = 0x80;
+static uint8_t stim = 0x18;
 
 static int8_t dir = 1;
 
@@ -66,8 +66,8 @@ static int irq_handler(unsigned irq, void *cookie_) {
 
     // Verifies if the interruption is from our hardware
     if (flags != INVALID_FLAG) {
-        if(flags != 0x100)
-            rt_printk("pcie_interrupt_driver: Interruption arrived from channel 0x%x\n", flags);
+        //if(flags != 0x100)
+          //  rt_printk("pcie_interrupt_driver: Interruption arrived from channel 0x%x\n", flags);
 
         if(flags & 0x100) {
             if (dir == 1)
@@ -76,11 +76,11 @@ static int irq_handler(unsigned irq, void *cookie_) {
                 stim = stim << 1;
             if (stim == 0x01) { // Threw the bit away
                 dir = -1;
-//                stim = 0x03;
+                stim = 0x03;
             }
             if (stim == 0x80) {
                 dir = 1;
-  //              stim = 0xc0;
+                stim = 0xc0;
             }
             iowrite32(stim, acq_base + ACQ_STIM);
         }
