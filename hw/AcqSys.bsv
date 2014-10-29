@@ -57,7 +57,8 @@ module mkAcqSys(AcqSys);
 		mkProgrammableCycleCounter(fromInteger(defaultWordPeriod));
 	Array#(Reg#(Bit#(1))) wordBit <- mkCReg(2, 0);
 	Array#(Reg#(Word)) word <- mkCReg(2, 0);
-	Reg#(Word) wordToMatch <- mkReg(0);
+	Reg#(Word) wordToMatch <- mkReg(32'hFFFFFFFF);
+	Reg#(Word) wordMask <- mkReg(0);
 
 	mkConnection(stimMem.portA.response, toPut(stimFromMem));
 
@@ -123,11 +124,16 @@ module mkAcqSys(AcqSys);
 					wordToMatch <= x;
 				tagged AvalonRequest{addr: 5, data: .*, command: Read}:
 					avalon.busClient.response.put(wordToMatch);
-				// Register @0x18: Read/write internal stimuli mem size
-				// (size == 0) disables the word finder
+				// Register @0x18: Read/write word valid bits mask
 				tagged AvalonRequest{addr: 6, data: .x, command: Write}:
-					stimMemSize <= truncate(x);
+					wordMask <= x;
 				tagged AvalonRequest{addr: 6, data: .*, command: Read}:
+					avalon.busClient.response.put(wordMask);
+				// Register @0x1c: Read/write internal stimuli mem size
+				// (size == 0) disables the word finder
+				tagged AvalonRequest{addr: 7, data: .x, command: Write}:
+					stimMemSize <= truncate(x);
+				tagged AvalonRequest{addr: 7, data: .*, command: Read}:
 					avalon.busClient.response.put(extend(stimMemSize));
 				// Deal with reads to addresses not listed above
 				tagged AvalonRequest{addr: .*, data: .*, command: Read}:
@@ -188,7 +194,7 @@ module mkAcqSys(AcqSys);
 	rule wordUpdate(acqStarted && !wordMatched && binBoundary.ticked);
 		let b = asReg(wordBit[0]);
 		let updword = (word[0] << 1) | extend(b);
-		if (updword == wordToMatch) begin
+		if ((updword & wordMask) == wordToMatch) begin
 			if (stimMemSize != 0) begin
 				wordMatched <= True;
 				stimIndex <= 0;
