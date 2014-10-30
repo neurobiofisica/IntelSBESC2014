@@ -121,7 +121,7 @@ static struct pci_driver pci_driver = {
 
 static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
     unsigned long resource;
-    int i, retval;
+    int retval;
 
     if(++n_devices > 1)
         return -EOVERFLOW;
