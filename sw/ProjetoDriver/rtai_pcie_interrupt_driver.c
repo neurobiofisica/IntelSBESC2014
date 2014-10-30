@@ -175,7 +175,7 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
     
     // Write a sample brief stimulus
     for(i = 0; i < 1024; i++)
-        iowrite(((i&1)==0) ? 0x01 : 0x80, acq_base + ACQ_BRIEFSTIM + i);
+        iowrite32(((i&1)==0) ? 0x01 : 0x80, acq_base + ACQ_BRIEFSTIM + i);
 		
     // Brief stimulus size
     // Note: setting this to a value != 0 activates the word matcher
