@@ -163,7 +163,7 @@ module mkAcqSys(AcqSys);
 	endrule
 
 	(* fire_when_enabled *)
-	rule stimLoadMem(acqStarted && stimRate.ticked);
+	rule stimLoadMem(stimRate.ticked);
 		stimOut[1] <= stimFromMem.first;
 		stimFromMem.deq;
 	endrule
@@ -218,7 +218,7 @@ module mkAcqSys(AcqSys);
 			datain: ?,
 			responseOnWrite: False
 		});
-		wordMatched <= stimIndex + 1 != stimMemSize;
+		wordMatched <= stimIndex + 1 < stimMemSize;
 		stimIndex <= stimIndex + 1;
 	endrule
 

@@ -183,7 +183,7 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
 		
     // Brief stimulus size
     // Note: setting this to a value != 0 activates the word matcher
-    iowrite32(0, acq_base + ACQ_BRIEFSTIMSZ);
+    iowrite32(16, acq_base + ACQ_BRIEFSTIMSZ);
 		
     rt_startup_irq(dev->irq);
 
