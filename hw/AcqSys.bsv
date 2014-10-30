@@ -158,6 +158,9 @@ module mkAcqSys(AcqSys);
 				datain: truncate(cmd.data),
 				responseOnWrite: False
 			});
+		end else begin
+            if(cmd.command == Read)
+				avalon.busClient.response.put(32'hBADC0FFE);
 		end
 	endrule
 
