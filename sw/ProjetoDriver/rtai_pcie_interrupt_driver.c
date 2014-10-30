@@ -168,10 +168,10 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
     iowrite32(200000, acq_base + ACQ_BOUNDPERIOD);
     
     // Word to match
-    iowrite32(7, acq_base + ACQ_MATCHWORD);
+    iowrite32(1, acq_base + ACQ_MATCHWORD);
     
     // Word valid-bit mask
-    iowrite32(6, acq_base + ACQ_WORDMASK);
+    iowrite32(0xffffffff, acq_base + ACQ_WORDMASK);
     
     // Write a sample brief stimulus
     for(i = 0; i < 1024; i++)
@@ -183,7 +183,7 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
 		
     // Brief stimulus size
     // Note: setting this to a value != 0 activates the word matcher
-    iowrite32(1024, acq_base + ACQ_BRIEFSTIMSZ);
+    iowrite32(0, acq_base + ACQ_BRIEFSTIMSZ);
 		
     rt_startup_irq(dev->irq);
 

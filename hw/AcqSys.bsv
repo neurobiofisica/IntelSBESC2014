@@ -51,7 +51,7 @@ module mkAcqSys(AcqSys);
 	FIFOF#(void) stimMemPendRead <- mkFIFOF;  // to enforce order on responses
 	Reg#(Bit#(TAdd#(StimMemAddrSize, 1))) stimMemSize <- mkReg(0);
 	Reg#(Bit#(TAdd#(StimMemAddrSize, 1))) stimIndex <- mkReg(0);
-	FIFOF#(Stim) stimFromMem <- mkBypassFIFOF;
+	FIFOF#(Stim) stimFromMem <- mkFIFOF;
 
 	ProgrammableCycleCounter#(AvalonDataSize) binBoundary <-
 		mkProgrammableCycleCounter(fromInteger(defaultWordPeriod));
