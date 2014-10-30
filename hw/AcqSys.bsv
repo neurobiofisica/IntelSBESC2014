@@ -52,7 +52,6 @@ module mkAcqSys(AcqSys);
 	FIFOF#(void) stimMemPendRead <- mkFIFOF;  // to enforce order on responses
 	Reg#(Bit#(TAdd#(StimMemAddrSize, 1))) stimMemSize <- mkReg(0);
 	Reg#(Bit#(TAdd#(StimMemAddrSize, 1))) stimIndex <- mkReg(0);
-	FIFOF#(Stim) stimFromMem <- mkFIFOF;
 
 	ProgrammableCycleCounter#(AvalonDataSize) binBoundary <-
 		mkProgrammableCycleCounter(fromInteger(defaultWordPeriod));
@@ -61,16 +60,7 @@ module mkAcqSys(AcqSys);
 	Reg#(Word) wordToMatch <- mkReg(32'hFFFFFFFF);
 	Reg#(Word) wordMask <- mkReg(0);
 
-	Get#(StimMemAddr) jtag_addr <- mkJtagGet("ADDR", mkFIFOF);
-	Put#(Stim) jtag_data <- mkJtagPut("DATA", mkFIFOF);
-	
-
-	//mkConnection(stimMem.portA.response, toPut(stimFromMem));
-    /*(* fire_when_enabled *)
-    rule askshjasgsahsahgh;
-        let data <- stimMem.portA.response.get;
-        stimFromMem.enq(data);
-    endrule*/
+	Put#(Stim) fifinho <- mkJtagPut("FIFI", mkSizedFIFOF(1000000));
 
 	(* fire_when_enabled *)
 	rule peekAcqFifo;
@@ -79,7 +69,7 @@ module mkAcqSys(AcqSys);
 
 	(* fire_when_enabled *)
 	rule answerStimMemRead(!acqStarted);
-		let resp <- stimMem.portB.response.get;
+		let resp <- stimMem.portA.response.get;
 		avalon.busClient.response.put(extend(resp));
 		stimMemPendRead.deq;
 	endrule
@@ -152,7 +142,7 @@ module mkAcqSys(AcqSys);
 		end else if(!acqStarted) begin
 			if(cmd.command == Read)
 				stimMemPendRead.enq(?);
-			stimMem.portB.request.put(BRAMRequest{
+			stimMem.portA.request.put(BRAMRequest{
 				write: cmd.command == Write,
 				address: truncate(cmd.addr),
 				datain: truncate(cmd.data),
@@ -176,25 +166,10 @@ module mkAcqSys(AcqSys);
 	endrule
 
 	(* fire_when_enabled *)
-	rule stimLoadMem(stimRate.ticked);
+	rule stimLoadMem(acqStarted && stimRate.ticked);
         let data <- stimMem.portA.response.get;
-		stimOut[1] <= data;//stimFromMem.first;
-		stimFromMem.deq;
-	endrule
-
-	rule jtag_get_addr(acqStarted);
-		let stimIndex <- jtag_addr.get;
-		stimMem.portB.request.put(BRAMRequest{
-			write: False,
-			address: stimIndex,
-			datain: ?,
-			responseOnWrite: False
-		});
-	endrule
-
-	rule jtag_put_data(acqStarted);
-		let data <- stimMem.portB.response.get;
-		jtag_data.put(data);
+		stimOut[1] <= data;
+		fifinho.put(data);
 	endrule
 
 	(* fire_when_enabled *)
@@ -240,14 +215,13 @@ module mkAcqSys(AcqSys);
 	endrule
 
 	(* fire_when_enabled *)
-	rule queryStimMem(wordMatched);
+	rule queryStimMem(acqStarted && wordMatched);
 		stimMem.portA.request.put(BRAMRequest{
 			write: False,
 			address: truncate(stimIndex),
 			datain: ?,
 			responseOnWrite: False
 		});
-        stimFromMem.enq(truncate(stimIndex));
 		wordMatched <= stimIndex + 1 < stimMemSize;
 		stimIndex <= stimIndex + 1;
 	endrule
