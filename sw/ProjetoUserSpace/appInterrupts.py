@@ -9,8 +9,15 @@ import json
 # Same numbers used on the driver (see defines)
 __FIFO_DAT__ = '/dev/rtf0'
 __FIFO_CMD__ = '/dev/rtf1'
+__FIFO_STM__ = '/dev/rtf2'
+__FIFO_ARG__ = '/dev/rtf3'
 
-__CLEAR_FIFO__ = 0
+__STOP_ACQ__ = 0
+__START_ACQ__ = 1
+__CLR_FIFO_STM__ = 2
+__CHANGE_BFSTM__ = 3
+__CHANGE_PATT__ = 4
+__LSTIM_TYPE__ = 5
 
 # TODO: Perguntar numero de canais em uma interface bela
 __NUM_SPK__ = 8
@@ -43,9 +50,9 @@ def start(handlers, data_till_now):
     global __FIFO_DAT__
     global __recv_notifier__
 
-    # Clear FIFO_DAT buffer
-    print("Clearing FIFO_DAT buffer...")
-    fifo_send(__FIFO_CMD__, struct.pack('<I', __CLEAR_FIFO__))
+    # Start acquisition
+    print("Starting acquisition...")
+    fifo_send(__FIFO_CMD__, struct.pack('<I', __START_ACQ__))
 
     # Open Menu Window
     # menu_window()
