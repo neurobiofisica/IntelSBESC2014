@@ -52,8 +52,6 @@ typedef enum {
 } stimuli_type;
 
 static stimuli_type long_stimuli_type = STIM_ZIGZAG;
-static uint8_t stim = 0x18;
-static int dir = 1;
 
 static uint32_t pattern_bin_size = 1;     /* bin size in units of screen refresh period */
 static uint64_t pattern_bits = 0xff;      /* pattern bins */
@@ -81,6 +79,7 @@ static int rtf_get_assert(int minor, void *buf, int count) {
 
 static void bin_maker_routine(void) {
     signal_bits = (signal_bits << 1) | spike_since_last_bin;
+    //rt_printk("pcie_interrupt_driver: dbg: word=%02x\n", (signal_bits & pattern_mask));
     if(!brief_stimuli_active && ((signal_bits & pattern_mask) == pattern_bits)) {
         brief_stimuli_pos = 0;
         brief_stimuli_active = 1;
@@ -97,10 +96,15 @@ static void bin_maker_routine(void) {
 
 // -------- Interrupt handler --------
 static int irq_handler(unsigned irq, void *cookie_) {
+    uint8_t stim;
     uint32_t flags = ioread32(acq_base + ACQ_CHANNELFLG);
     uint32_t timestamp;
 
     uint64_t data;
+
+    // for zig-zag
+    static uint8_t zigstim = 0x18;
+    static int dir = 1;
 
     // Verifies if the interruption is from our hardware
     if (flags != INVALID_FLAG) {
@@ -121,24 +125,25 @@ static int irq_handler(unsigned irq, void *cookie_) {
 			
 			if (long_stimuli_type == STIM_FIFO) {
 				rtf_get(FIFO_STM, &stim, sizeof(stim));
-			}
-			
-			if (brief_stimuli_active) {
-				stim = brief_stimuli[brief_stimuli_pos++];
-			}
+			}			
 			else if (long_stimuli_type == STIM_ZIGZAG) {
 				if (dir == 1)
-				   stim = stim >> 1;
+				    zigstim = zigstim >> 1;
 				else if (dir == -1)
-					stim = stim << 1;
-				if (stim == 0x01) { // Threw the bit away
+					zigstim = zigstim << 1;
+				if (zigstim == 0x01) { // Threw the bit away
 					dir = -1;
-					stim = 0x03;
+					zigstim = 0x03;
 				}
-				if (stim == 0x80) {
+				if (zigstim == 0x80) {
 					dir = 1;
-					stim = 0xc0;
+					zigstim = 0xc0;
 				}
+                stim = zigstim;
+			}
+
+			if (brief_stimuli_active) {
+				stim = brief_stimuli[brief_stimuli_pos++];
 			}
 			
             iowrite32(stim, acq_base + ACQ_STIM);
@@ -207,7 +212,7 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
     acq_base = ioremap_nocache(resource + ACQSYS + ACQ_STARTED, 0x4000);
 
     // Load initial stimulus
-    iowrite32(stim, acq_base + ACQ_STIM);
+    iowrite32(0, acq_base + ACQ_STIM);
 
     // Read vendor ID
     rt_printk("pcie_interrupt_driver: Found Vendor id: 0x%0.4x\n", dev->vendor);
@@ -288,6 +293,7 @@ static int fifo_cmd_handler(unsigned int fifo) {
             brief_stimuli_pos = 0;
             rt_printk("pcie_interrupt_driver: changing brief stim (len=%u)\n", brief_stimuli_len);
         }
+        break;
     case CMD_CHANGE_PATT:
         /* -- change pattern -- */
         {
@@ -307,6 +313,7 @@ static int fifo_cmd_handler(unsigned int fifo) {
 			long_stimuli_type = tp;
 			rt_printk("pcie_interrupt_driver: changed long stimulus type to %u\n", long_stimuli_type);
 		}
+        break;
     }
     return 0;
 }

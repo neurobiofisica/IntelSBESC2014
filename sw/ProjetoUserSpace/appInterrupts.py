@@ -63,8 +63,8 @@ def start(handlers, data_till_now):
     """ Initialize FIFOs and add the given receivers. """
 
     # Start acquisition
-    send_brief_stimulus(256*[0x80,0x01])
-    send_pattern('11011011', 1)
+    send_brief_stimulus(4*[0x80,0x01])
+    send_pattern('1101', 1)
     
     print("Starting acquisition...")
     fifo_send(__FIFO_CMD__, struct.pack('<I', __START_ACQ__))
