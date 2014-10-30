@@ -34,7 +34,7 @@ def fifo_send(devnode, data):
     os.close(fd)
 
 def send_brief_stimulus(positions):
-	assert(len(positions) <= 4096)
+    assert(len(positions) <= 4096)
     posdata = ''.join([struct.pack('<B', pos) for pos in positions])
     fifo_send(__FIFO_ARG__, struct.pack('<I', len(posdata)) + posdata)
     fifo_send(__FIFO_CMD__, struct.pack('<I', 3))
