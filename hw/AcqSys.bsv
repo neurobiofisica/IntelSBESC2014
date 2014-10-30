@@ -78,7 +78,7 @@ module mkAcqSys(AcqSys);
 	endrule
 
 	(* fire_when_enabled *)
-	rule answerStimMemRead;
+	rule answerStimMemRead(!acqStarted);
 		let resp <- stimMem.portB.response.get;
 		avalon.busClient.response.put(extend(resp));
 		stimMemPendRead.deq;
@@ -149,7 +149,7 @@ module mkAcqSys(AcqSys);
 				tagged AvalonRequest{addr: .*, data: .*, command: Read}:
 					avalon.busClient.response.put(32'hBADC0FFE);
 			endcase
-		end else begin
+		end else if(!acqStarted) begin
 			if(cmd.command == Read)
 				stimMemPendRead.enq(?);
 			stimMem.portB.request.put(BRAMRequest{
@@ -179,10 +179,9 @@ module mkAcqSys(AcqSys);
 		stimFromMem.deq;
 	endrule
 
-	(*descending_urgency="queryStimMem,jtag_get_addr"*)
-	rule jtag_get_addr;
+	rule jtag_get_addr(acqStarted);
 		let stimIndex <- jtag_addr.get;
-		stimMem.portA.request.put(BRAMRequest{
+		stimMem.portB.request.put(BRAMRequest{
 			write: False,
 			address: stimIndex,
 			datain: ?,
@@ -190,9 +189,8 @@ module mkAcqSys(AcqSys);
 		});
 	endrule
 
-	(*descending_urgency="stimLoadMem,jtag_put_data"*)
-	rule jtag_put_data;
-		let data <- stimMem.portA.response.get;
+	rule jtag_put_data(acqStarted);
+		let data <- stimMem.portB.response.get;
 		jtag_data.put(data);
 	endrule
 
