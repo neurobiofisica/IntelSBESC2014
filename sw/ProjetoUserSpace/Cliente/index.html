@@ -1,222 +1,558 @@
-<html>
-    <head>
-        <title>Teste cliente</title>
-    </head>
-    <body>
-        <script src="d3.min.js"></script>
-        <script src="jquery-2.1.1.min.js"></script>
-        <script src="flot/jquery.flot.js"></script>
-        <script src="cbuffer.js"></script>
-
-        <!-- websocket to get the data -->
-        <script>
-var NChan = 8;
-var LenBuffer = 10;
-var stimLen = 1.4;
-var NLinesRaster = 40;
-
-$(function () {
-
-    function ProcessData() {
-        // Attributes
-        this.last_timestamp = Array.apply(null, new Array(NChan)).map(Number.prototype.valueOf,-1);
-        this.first_timestamp = -1;
-        this.isi = Array.apply(null, new Array(NChan)).map(Number.prototype.valueOf,0);
-        this.cbuffer = new Array()
-        this.len = Array.apply(null, new Array(NChan)).map(Number.prototype.valueOf,0);
-        this.graficos = new Array();
-        this.rasters = new Array();
-        this.datarasters = new Array();
-
-        this.stimCounter = 0;
-
-        this.optionsgraficos = {
-            series: {
-                lines: { show: true },
-                points: { show: true },
-                color: "#000000",
-            },
-            /*yaxis: {
-                min: 0,
-                max: 2,
-            },*/
-        };
-
-        this.optionsrasters = {
-            series: {
-                lines: { show: false },
-                points: { show: true, symbol: "circle", radius:1, fill:true, fillColor:"#000000", },
-                color: "#000000",
-            },
-            xaxis: {
-                min: 0,
-                max: stimLen,
-            },
-            yaxis: {
-                min: 0,
-                max: NLinesRaster,
-            },
-        };
-
-        this.start = function() {
-            for (var i=0; i<NChan; i++) {
-                this.cbuffer[i] = new CBuffer(LenBuffer);
-                this.datarasters[i] = new Array();
-                this.graficos[i] = $.plot("#grafico" + String(i), [ [0,0] ], this.optionsgraficos);
-                this.rasters[i] = $.plot("#raster" + String(i), [ [0,0] ], this.optionsrasters);
-            };
-        };
-
-        this.sendData = function (self, channel) {
-            var d1 = new $.Deferred();
-            var flag = false;
-
-            var datagraficos = [ self.cbuffer[channel].toArray().slice(0,self.len[channel]) ]
-            //self.graficos[channel].setData(datagraficos);
-            //self.graficos[channel].setupGrid();
-            //self.graficos[channel].draw();
-
-            var relTS = self.cbuffer[channel].last()[0] - self.first_timestamp;
-            if (Math.floor( relTS / stimLen) != self.stimCounter) {
-                flag=true;
-            };
-            self.stimCounter = Math.floor( relTS / stimLen);
-            if (self.stimCounter <= NLinesRaster) {
-                var dataraster_now = [ [relTS - (self.stimCounter*stimLen) , self.stimCounter ] ];
-                self.datarasters[channel] = self.datarasters[channel].concat([ dataraster_now ]);
-                if (flag == true) {
-                    self.rasters[channel].setData(self.datarasters[channel]);
-                    //self.rasters[channel].setupGrid();
-                    self.rasters[channel].draw();
-                    flag=false;
-                };
-            };
-        };
-
-        this.to_buffer = function (channel, timestamp, isi) {
-            this.cbuffer[channel].push([timestamp,isi]);
-            if (this.len[channel] < LenBuffer) {
-                this.len[channel]++;
-            }
-        };
-
-        // Methods
-        this.update = function (flags, timestamp) {
-            var d1 =  new $.Deferred();
-            if (this.first_timestamp == -1) {
-                this.first_timestamp = timestamp
-            };
-
-            for (var i=0; i<=NChan; i++) {
-                if ( flags & (1 << i) ) {
-                    if (this.last_timestamp[i] == -1) {
-                        this.last_timestamp[i] = timestamp;
-                    }
-                    this.isi[i] = timestamp - this.last_timestamp[i];
-                    this.last_timestamp[i] = timestamp;
-
-                    //Gambi
-                    var self = this;
-                    var f = this.sendData;
-
-                    $.when( d1 ).done( function (v1) {
-                        f(self, i);
-                    });
-                    d1.resolve(
-                        this.to_buffer(i, timestamp, this.isi[i])
-                    );
-                };
-            };
-        };
-
-    };
-
-    var processData = new ProcessData();
-    processData.start();
-
-    socket = new WebSocket("ws://192.168.0.1:8888/socket");
-
-    socket.onopen = function (event) {
-        console.log("Web Socket opened");
-    };
-
-    socket.onmessage = function (event) {
-        var data = JSON.parse(event.data);
-        var flags = data[0];
-        var timestamp = data[1];
-        processData.update(flags,timestamp);
-    };
-
-    socket.onclose = function() {
-        console.log("Web Socket closed");
-    };
-
-//    var canvas = document.getElementById('plot0');
-//        canvas.width = 0.9*window.innerWidth;
-
-//    var canvas = document.getElementById('grafico0');
-  //      canvas.width = 0.9*window.innerWidth;
-    //    canvas.height = 100;
-});
-
-
-        </script>
-        <p>Channel 0</p>
-        <div id="grafico0" style="width:90%; height:100px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <div id="raster0" style="width:90%; height:300px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <br />
-
-        <p>Channel 1</p>
-        <div id="grafico1" style="width:90%; height:100px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <div id="raster1" style="width:90%; height:300px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <br />
-
-        <p>Channel 2</p>
-        <div id="grafico2" style="width:90%; height:100px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <div id="raster2" style="width:90%; height:300px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <br />
-
-        <p>Channel 3</p>
-        <div id="grafico3" style="width:90%; height:100px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <div id="raster3" style="width:90%; height:300px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <br />
-
-        <p>Channel 4</p>
-        <div id="grafico4" style="width:90%; height:100px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <div id="raster4" style="width:90%; height:300px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <br />
-
-        <p>Channel 5</p>
-        <div id="grafico5" style="width:90%; height:100px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <div id="raster5" style="width:90%; height:300px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <br />
-
-        <p>Channel 6</p>
-        <div id="grafico6" style="width:90%; height:100px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <div id="raster6" style="width:90%; height:300px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <br />
-
-        <p>Channel 7</p>
-        <div id="grafico7" style="width:90%; height:100px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <div id="raster7" style="width:90%; height:300px; box-sizing:
-border-box; border: 1px solid #000000;"></div>
-        <!--canvas id="plot0" height="200" style="border: 1px solid
-#000000;"></canvas-->
-
-    </body>
-</html>
+<!DOCTYPE HTML>
+<html><head><meta charset="UTF-8"><title>index</title><script type="text/javascript" src="elm-runtime.js"></script><script type="text/javascript">Elm.Main = Elm.Main || {};
+Elm.Main.make = function (_elm) {
+   "use strict";
+   _elm.Main = _elm.Main || {};
+   if (_elm.Main.values)
+   return _elm.Main.values;
+   var _op = {},
+   _N = Elm.Native,
+   _U = _N.Utils.make(_elm),
+   _L = _N.List.make(_elm),
+   _A = _N.Array.make(_elm),
+   _E = _N.Error.make(_elm),
+   $moduleName = "Main",
+   $Basics = Elm.Basics.make(_elm),
+   $Bitwise = Elm.Bitwise.make(_elm),
+   $Color = Elm.Color.make(_elm),
+   $Dict = Elm.Dict.make(_elm),
+   $Graphics$Collage = Elm.Graphics.Collage.make(_elm),
+   $Graphics$Element = Elm.Graphics.Element.make(_elm),
+   $Graphics$Input = Elm.Graphics.Input.make(_elm),
+   $Json = Elm.Json.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Signal = Elm.Signal.make(_elm),
+   $String = Elm.String.make(_elm),
+   $Text = Elm.Text.make(_elm),
+   $Time = Elm.Time.make(_elm),
+   $WebSocket = Elm.WebSocket.make(_elm),
+   $Window = Elm.Window.make(_elm);
+   var contBorder = 10;
+   var stimPlotHeight = 21;
+   var chSelHeight = 50;
+   var txt = F3(function (h,
+   clr,
+   string) {
+      return $Text.leftAligned($Text.height(h)($Text.typeface(_L.fromArray(["Helvetica Neue"
+                                                                           ,"Sans-serif"]))($Text.color(clr)($Text.toText(string)))));
+   });
+   var numChannels = 8;
+   var channelInput = $Graphics$Input.input(0);
+   var chButton = F2(function (ch,
+   isSel) {
+      return function () {
+         var n = chSelHeight - contBorder;
+         var bcolor = isSel ? A3($Color.rgb,
+         200,
+         255,
+         200) : $Color.lightGray;
+         var btn = function (alpha) {
+            return $Graphics$Element.layers(_L.fromArray([$Graphics$Element.color($Color.black)(A3($Graphics$Element.container,
+                                                         n,
+                                                         n,
+                                                         $Graphics$Element.middle)($Graphics$Element.color(bcolor)(A3($Graphics$Element.container,
+                                                         n - 2,
+                                                         n - 2,
+                                                         $Graphics$Element.middle)(A4($Graphics$Element.container,
+                                                         n,
+                                                         n,
+                                                         $Graphics$Element.middle,
+                                                         A3(txt,
+                                                         0.6 * n,
+                                                         $Color.black,
+                                                         $String.show(ch)))))))
+                                                         ,A2($Graphics$Element.color,
+                                                         A4($Color.rgba,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         alpha),
+                                                         A2($Graphics$Element.spacer,
+                                                         n,
+                                                         n))]));
+         };
+         return A5($Graphics$Input.customButton,
+         channelInput.handle,
+         ch,
+         btn(0),
+         btn(5.0e-2),
+         btn(0.1));
+      }();
+   });
+   var chSelScene = F3(function (w,
+   h,
+   sel) {
+      return $Graphics$Element.color($Color.darkGray)(A3($Graphics$Element.container,
+      w,
+      h,
+      $Graphics$Element.midLeft)($Graphics$Element.flow($Graphics$Element.down)(F2(function (x,
+      y) {
+         return A2($List._op["::"],
+         x,
+         y);
+      })(A2($Graphics$Element.spacer,
+      w,
+      contBorder))(_L.fromArray([$Graphics$Element.flow($Graphics$Element.right)($List.concat($List.map(function (ch) {
+         return _L.fromArray([A2($Graphics$Element.spacer,
+                             10,
+                             h)
+                             ,A2(chButton,
+                             ch,
+                             _U.eq(ch,sel))]);
+      })(_L.range(0,
+      numChannels - 1))))])))));
+   });
+   var plotContainer = F3(function (w,
+   h,
+   elem) {
+      return $Graphics$Element.color($Color.darkGray)(A3($Graphics$Element.container,
+      w + contBorder,
+      h + contBorder,
+      $Graphics$Element.middle)($Graphics$Element.color($Color.lightGray)(A3($Graphics$Element.container,
+      w,
+      h,
+      $Graphics$Element.middle)(elem))));
+   });
+   var plotDim = A2($Signal._op["<~"],
+   function (_v0) {
+      return function () {
+         switch (_v0.ctor)
+         {case "_Tuple2":
+            return {ctor: "_Tuple2"
+                   ,_0: _v0._0 - contBorder
+                   ,_1: _v0._1 - 2 * contBorder - stimPlotHeight - chSelHeight};}
+         _E.Case($moduleName,
+         "on line 157, column 6 to 69");
+      }();
+   },
+   $Window.dimensions);
+   var chSelector = A2($Signal._op["~"],
+   A2($Signal._op["<~"],
+   F2(function (_v4,ch) {
+      return function () {
+         switch (_v4.ctor)
+         {case "_Tuple2":
+            return A3(chSelScene,
+              _v4._0 + contBorder,
+              chSelHeight,
+              ch);}
+         _E.Case($moduleName,
+         "on line 230, column 28 to 70");
+      }();
+   }),
+   plotDim),
+   channelInput.signal);
+   var plotStim = F2(function (_v8,
+   mstim) {
+      return function () {
+         switch (_v8.ctor)
+         {case "_Tuple2":
+            return function () {
+                 switch (mstim.ctor)
+                 {case "Just":
+                    return A2($Graphics$Collage.collage,
+                      _v8._0,
+                      _v8._1)(function () {
+                         var border = 5.0;
+                         var w$ = $Basics.toFloat(_v8._0) - 2 * border;
+                         var xfac = w$ / $Basics.toFloat($List.length(mstim._0));
+                         var h$ = $Basics.toFloat(_v8._1) - 2 * border;
+                         var yfac = h$ / 8.0;
+                         var xoff = border - $Basics.toFloat(_v8._0) / 2;
+                         var yoff = border - $Basics.toFloat(_v8._1) / 2;
+                         return A2($List.indexedMap,
+                         F2(function (i,elem) {
+                            return function () {
+                               var x = xoff + xfac * $Basics.toFloat(i);
+                               return $Graphics$Collage.group($List.filterMap(function (j) {
+                                  return function () {
+                                     var y = yoff + yfac * j;
+                                     var mask = A2($Bitwise.shiftLeft,
+                                     1,
+                                     $Basics.truncate(j));
+                                     return !_U.eq(A2($Bitwise.and,
+                                     elem,
+                                     mask),
+                                     0) ? $Maybe.Just($Graphics$Collage.move({ctor: "_Tuple2"
+                                                                             ,_0: x
+                                                                             ,_1: y})($Graphics$Collage.filled($Color.black)($Graphics$Collage.square(2)))) : $Maybe.Nothing;
+                                  }();
+                               })(_L.range(0,7)));
+                            }();
+                         }),
+                         mstim._0);
+                      }());
+                    case "Nothing":
+                    return $Graphics$Element.empty;}
+                 _E.Case($moduleName,
+                 "between lines 134 and 153");
+              }();}
+         _E.Case($moduleName,
+         "between lines 134 and 153");
+      }();
+   });
+   var plotRaster = F2(function (_v14,
+   times) {
+      return function () {
+         switch (_v14.ctor)
+         {case "_Tuple2":
+            return function () {
+                 var border = 5.0;
+                 var w$ = $Basics.toFloat(_v14._0) - 2 * border;
+                 var xoff = border - $Basics.toFloat(_v14._0) / 2;
+                 var yoff = border - $Basics.toFloat(_v14._1) / 2;
+                 var xrange = 5.0;
+                 var vspacing = 5.0;
+                 return A2($List.map,
+                 function (_v18) {
+                    return function () {
+                       switch (_v18.ctor)
+                       {case "_Tuple2":
+                          return function () {
+                               var pcolor = _v18._0 ? $Color.red : $Color.black;
+                               var lineno = $Basics.toFloat($Basics.floor(_v18._1 / xrange));
+                               var y = yoff + vspacing * lineno;
+                               var x = xoff + w$ * (_v18._1 / xrange - lineno);
+                               return $Graphics$Collage.move({ctor: "_Tuple2"
+                                                             ,_0: x
+                                                             ,_1: y})($Graphics$Collage.filled(pcolor)($Graphics$Collage.square(2)));
+                            }();}
+                       _E.Case($moduleName,
+                       "between lines 126 and 130");
+                    }();
+                 },
+                 times);
+              }();}
+         _E.Case($moduleName,
+         "between lines 119 and 131");
+      }();
+   });
+   var initialPlotState = {_: {}
+                          ,archive: _L.fromArray([])
+                          ,ch: 0
+                          ,clreq: 0
+                          ,dim: {ctor: "_Tuple2"
+                                ,_0: 0
+                                ,_1: 0}
+                          ,drawtime: 0
+                          ,pending: _L.fromArray([])
+                          ,plot: _L.fromArray([])
+                          ,ticket: 0};
+   var PlotState = F8(function (a,
+   b,
+   c,
+   d,
+   e,
+   f,
+   g,
+   h) {
+      return {_: {}
+             ,archive: d
+             ,ch: a
+             ,clreq: g
+             ,dim: b
+             ,drawtime: e
+             ,pending: c
+             ,plot: h
+             ,ticket: f};
+   });
+   var PlotInput = F6(function (a,
+   b,
+   c,
+   d,
+   e,
+   f) {
+      return {_: {}
+             ,ch: a
+             ,clreq: f
+             ,dim: b
+             ,drawtime: c
+             ,incoming: d
+             ,ticket: e};
+   });
+   var timesFromData = F2(function (ch,
+   list) {
+      return function () {
+         var feedmask = A2($Bitwise.shiftLeft,
+         1,
+         numChannels + 1);
+         var chmask = A2($Bitwise.shiftLeft,
+         1,
+         ch);
+         return A2($List.filterMap,
+         function (_v22) {
+            return function () {
+               switch (_v22.ctor)
+               {case "_Tuple2":
+                  return _U.eq(A2($Bitwise.and,
+                    _v22._0,
+                    chmask),
+                    0) ? $Maybe.Nothing : $Maybe.Just({ctor: "_Tuple2"
+                                                      ,_0: !_U.eq(A2($Bitwise.and,
+                                                      _v22._0,
+                                                      feedmask),
+                                                      0)
+                                                      ,_1: _v22._1});}
+               _E.Case($moduleName,
+               "between lines 58 and 59");
+            }();
+         },
+         list);
+      }();
+   });
+   var updatePlot = F3(function (func,
+   inp,
+   cur) {
+      return function () {
+         var clearRequested = !_U.eq(inp.clreq,
+         cur.clreq);
+         var redraw = !_U.eq(inp.ch,
+         cur.ch) || (!_U.eq(inp.dim,
+         cur.dim) || clearRequested);
+         var draw = redraw || !_U.eq(inp.drawtime,
+         cur.drawtime);
+         var curplot = redraw ? _L.fromArray([]) : cur.plot;
+         var haveIncoming = !_U.eq(inp.ticket,
+         cur.ticket);
+         var pending = haveIncoming ? _L.append(inp.incoming,
+         cur.pending) : cur.pending;
+         var archive = clearRequested ? _L.fromArray([]) : draw ? _L.append(pending,
+         cur.archive) : cur.archive;
+         var list = redraw ? archive : draw ? pending : _L.fromArray([]);
+         var times = A2(timesFromData,
+         inp.ch,
+         list);
+         var plot = draw ? _L.fromArray([$Graphics$Collage.group(F2(function (x,
+         y) {
+            return _L.append(x,y);
+         })(curplot)(A2(func,
+         inp.dim,
+         times)))]) : cur.plot;
+         return {_: {}
+                ,archive: archive
+                ,ch: inp.ch
+                ,clreq: inp.clreq
+                ,dim: inp.dim
+                ,drawtime: inp.drawtime
+                ,pending: draw ? _L.fromArray([]) : pending
+                ,plot: plot
+                ,ticket: inp.ticket};
+      }();
+   });
+   var socket = A2($Signal._op["<~"],
+   $Json.fromString,
+   $WebSocket.connect("ws://192.168.0.1:8888/socket")($Signal.constant("")));
+   var dicFromJson = function (json) {
+      return function () {
+         switch (json.ctor)
+         {case "Just":
+            switch (json._0.ctor)
+              {case "Object":
+                 return $Maybe.Just(json._0._0);}
+              break;}
+         return $Maybe.Nothing;
+      }();
+   };
+   var checkKind = F2(function (kind,
+   json) {
+      return F2(function (x,y) {
+         return _U.eq(x,y);
+      })($Maybe.Just(true))($Maybe.map(function (dic) {
+         return _U.eq(A2($Dict.get,
+         "kind",
+         dic),
+         $Maybe.Just($Json.String(kind)));
+      })(dicFromJson(json)));
+   });
+   var isStim = checkKind("stim");
+   var clearReqs = A2($Signal.countIf,
+   checkKind("clear"),
+   socket);
+   var extractStim = function (json) {
+      return function () {
+         var _v29 = dicFromJson(json);
+         switch (_v29.ctor)
+         {case "Just":
+            return function () {
+                 var _v31 = A2($Dict.get,
+                 "data",
+                 _v29._0);
+                 switch (_v31.ctor)
+                 {case "Just":
+                    switch (_v31._0.ctor)
+                      {case "Array":
+                         return $Maybe.Just(A2($List.filterMap,
+                           function (elem) {
+                              return function () {
+                                 switch (elem.ctor)
+                                 {case "Number":
+                                    return $Maybe.Just($Basics.truncate(elem._0));}
+                                 return $Maybe.Nothing;
+                              }();
+                           },
+                           _v31._0._0));}
+                      break;}
+                 return $Maybe.Nothing;
+              }();}
+         return $Maybe.Nothing;
+      }();
+   };
+   var dataListFromJson = function (json) {
+      return function () {
+         switch (json.ctor)
+         {case "Just":
+            switch (json._0.ctor)
+              {case "Array":
+                 return A2($List.filterMap,
+                   function (elem) {
+                      return function () {
+                         switch (elem.ctor)
+                         {case "Array":
+                            switch (elem._0.ctor)
+                              {case "::":
+                                 switch (elem._0._0.ctor)
+                                   {case "Number":
+                                      switch (elem._0._1.ctor)
+                                        {case "::":
+                                           switch (elem._0._1._0.ctor)
+                                             {case "Number":
+                                                switch (elem._0._1._1.ctor)
+                                                  {case "[]":
+                                                     return $Maybe.Just({ctor: "_Tuple2"
+                                                                        ,_0: $Basics.truncate(elem._0._0._0)
+                                                                        ,_1: elem._0._1._0._0});}
+                                                  break;}
+                                             break;}
+                                        break;}
+                                   break;}
+                              break;}
+                         return $Maybe.Nothing;
+                      }();
+                   },
+                   json._0._0);}
+              break;}
+         return _L.fromArray([]);
+      }();
+   };
+   var plotInput = function () {
+      var incomingSig = A2($Signal._op["<~"],
+      dataListFromJson,
+      socket);
+      var ticketSig = $Signal.count(incomingSig);
+      return A2($Signal._op["~"],
+      A2($Signal._op["~"],
+      A2($Signal._op["~"],
+      A2($Signal._op["~"],
+      A2($Signal._op["~"],
+      A2($Signal._op["<~"],
+      F6(function (ch,
+      dim,
+      drawtime,
+      incoming,
+      ticket,
+      clreq) {
+         return {_: {}
+                ,ch: ch
+                ,clreq: clreq
+                ,dim: dim
+                ,drawtime: drawtime
+                ,incoming: incoming
+                ,ticket: ticket};
+      }),
+      channelInput.signal),
+      plotDim),
+      $Time.every($Time.second)),
+      incomingSig),
+      ticketSig),
+      clearReqs);
+   }();
+   var lastStim = A2($Signal._op["<~"],
+   extractStim,
+   A3($Signal.keepIf,
+   isStim,
+   $Maybe.Nothing,
+   socket));
+   var stimPlot = A2($Signal._op["~"],
+   A2($Signal._op["<~"],
+   F2(function (_v47,stim) {
+      return function () {
+         switch (_v47.ctor)
+         {case "_Tuple2":
+            return A2(plotStim,
+              {ctor: "_Tuple2"
+              ,_0: _v47._0 - contBorder
+              ,_1: stimPlotHeight},
+              stim);}
+         _E.Case($moduleName,
+         "on line 172, column 28 to 74");
+      }();
+   }),
+   $Window.dimensions),
+   lastStim);
+   var main = A2($Signal._op["~"],
+   A2($Signal._op["~"],
+   A2($Signal._op["~"],
+   A2($Signal._op["<~"],
+   F4(function (_v51,
+   st,
+   stimp,
+   chsel) {
+      return function () {
+         switch (_v51.ctor)
+         {case "_Tuple2":
+            return A2($Graphics$Element.flow,
+              $Graphics$Element.down,
+              _L.fromArray([chsel
+                           ,A2(plotContainer,
+                           _v51._0,
+                           stimPlotHeight)(stimp)
+                           ,A2(plotContainer,
+                           _v51._0,
+                           _v51._1)(A3($Graphics$Collage.collage,
+                           _v51._0,
+                           _v51._1,
+                           st.plot))]));}
+         _E.Case($moduleName,
+         "between lines 235 and 237");
+      }();
+   }),
+   plotDim),
+   A3($Signal.foldp,
+   updatePlot(plotRaster),
+   initialPlotState,
+   plotInput)),
+   stimPlot),
+   chSelector);
+   _elm.Main.values = {_op: _op
+                      ,lastStim: lastStim
+                      ,dataListFromJson: dataListFromJson
+                      ,dicFromJson: dicFromJson
+                      ,checkKind: checkKind
+                      ,isStim: isStim
+                      ,clearReqs: clearReqs
+                      ,extractStim: extractStim
+                      ,socket: socket
+                      ,timesFromData: timesFromData
+                      ,PlotInput: PlotInput
+                      ,PlotState: PlotState
+                      ,initialPlotState: initialPlotState
+                      ,updatePlot: updatePlot
+                      ,plotRaster: plotRaster
+                      ,plotStim: plotStim
+                      ,plotDim: plotDim
+                      ,plotInput: plotInput
+                      ,stimPlot: stimPlot
+                      ,plotContainer: plotContainer
+                      ,channelInput: channelInput
+                      ,numChannels: numChannels
+                      ,chSelScene: chSelScene
+                      ,chButton: chButton
+                      ,txt: txt
+                      ,chSelHeight: chSelHeight
+                      ,stimPlotHeight: stimPlotHeight
+                      ,contBorder: contBorder
+                      ,chSelector: chSelector
+                      ,main: main};
+   return _elm.Main.values;
+};</script></head><body><script type="text/javascript">Elm.fullscreen(Elm.Main)</script><noscript></noscript></body></html>

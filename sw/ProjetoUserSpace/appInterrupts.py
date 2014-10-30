@@ -17,6 +17,8 @@ __NUM_SPK__ = 8
 
 ticks_per_second = 1.e6
 
+first_time = None
+
 def fifo_send(devnode, data):
     sys.stderr.write('fifo_send devnode=%s, data=%s\n' % (devnode, data.encode('hex')))
     sys.stderr.flush()
@@ -36,7 +38,7 @@ def fifo_send(devnode, data):
     btn.connect(btn, SIGNAL("clicked(bool)"), reset_fifo)
     msg.show()
 '''
-def start(handlers):
+def start(handlers, data_till_now):
     """ Initialize FIFOs and add the given receivers. """
     global __FIFO_DAT__
     global __recv_notifier__
@@ -59,6 +61,8 @@ def start(handlers):
     fd = os.open(__FIFO_DAT__, os.O_RDONLY)
     def callback(fd_, event):
         """ Callback for the receiving FIFO. """
+        global first_time
+
         # Receive data
         dataraw = os.read(fd_, 8)
         if dataraw == '':
@@ -70,12 +74,18 @@ def start(handlers):
         rawts = (data >> 32) 
         ts = float(rawts) / ticks_per_second
 
+        if first_time == None and ((ts & 0x100) != 0):
+            first_time = ts
+
         # Dispatch to handlers
         # Objects of a class that contains the 'process' method
         if flags != 0x100:
+            arr_data = [flags, ts - first_time]
+            data_till_now.append(  arr_data  )
+            json_data = json.dumps( [ arr_data ] )
             for x in handlers:
                 try:
-                    x.process(json.dumps( [flags, ts] ))
+                    x.process(json_data)
                 except: 
                     traceback.print_exc()
         
