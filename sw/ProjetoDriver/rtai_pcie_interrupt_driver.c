@@ -160,9 +160,6 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
         rt_printk("pcie_interrupt_driver: request_irq failed!");
         return retval;
     }
-
-    // Enable Acquisition
-    iowrite32(0x1, acq_base + ACQ_STARTED);
     
     // Bin boundary period = 200000 * 10ns
     iowrite32(200000, acq_base + ACQ_BOUNDPERIOD);
@@ -184,8 +181,11 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
     // Brief stimulus size
     // Note: setting this to a value != 0 activates the word matcher
     iowrite32(16, acq_base + ACQ_BRIEFSTIMSZ);
-		
+	
     rt_startup_irq(dev->irq);
+    
+    // Enable Acquisition
+    iowrite32(0x1, acq_base + ACQ_STARTED);
 
     return 0;
 }
