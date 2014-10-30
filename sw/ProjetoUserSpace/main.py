@@ -8,7 +8,7 @@ __dirname__ = os.path.dirname(os.path.abspath(__file__))
 static_path = os.path.join(__dirname__, 'Cliente')
 
 application = tornado.web.Application([
-    (r"/()$", web.StaticFileHandler, {'path': os.path.join(static_path,
+    (r"/()$", tornado.web.StaticFileHandler, {'path': os.path.join(static_path,
 'index.html')}),
     (r"/socket", TornadoRecv),
     (r"/(.*)", tornado.web.StaticFileHandler, {"path": static_path}),
