@@ -34,7 +34,7 @@
 #define ACQ_MATCHWORD   0x14
 #define ACQ_WORDMASK    0x18
 #define ACQ_BRIEFSTIMSZ 0x1c
-#define ACQ_BRIEFSTIM   0x800    
+#define ACQ_BRIEFSTIM   0x2000    
 
 // Invalid flag from channels (empty FIFO)
 #define INVALID_FLAG    0x80000000
@@ -142,7 +142,7 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
 
     // Gets a pointer to the AcqSys configuration registers
     resource = pci_resource_start(dev,0);
-    acq_base = ioremap_nocache(resource + ACQSYS + ACQ_STARTED, 0xc);
+    acq_base = ioremap_nocache(resource + ACQSYS + ACQ_STARTED, 0x4000);
 
     // Load initial stimulus
     iowrite32(stim, acq_base + ACQ_STIM);
@@ -168,14 +168,18 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
     iowrite32(200000, acq_base + ACQ_BOUNDPERIOD);
     
     // Word to match
-    iowrite32(219, acq_base + ACQ_MATCHWORD);
+    iowrite32(7, acq_base + ACQ_MATCHWORD);
     
     // Word valid-bit mask
-    iowrite32(0xFF, acq_base + ACQ_WORDMASK);
+    iowrite32(6, acq_base + ACQ_WORDMASK);
     
     // Write a sample brief stimulus
     for(i = 0; i < 1024; i++)
-        iowrite32(((i&1)==0) ? 0x01 : 0x80, acq_base + ACQ_BRIEFSTIM + i);
+        iowrite32(((i&1)==0) ? 0x01 : 0x80, acq_base + ACQ_BRIEFSTIM + 4*i);
+
+    for(i = 0; i < 1024; i++)
+        rt_printk("%02x,", ioread32(acq_base + ACQ_BRIEFSTIM + 4*i));
+    rt_printk("\n");
 		
     // Brief stimulus size
     // Note: setting this to a value != 0 activates the word matcher
