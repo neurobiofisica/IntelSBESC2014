@@ -60,7 +60,12 @@ module mkAcqSys(AcqSys);
 	Reg#(Word) wordToMatch <- mkReg(32'hFFFFFFFF);
 	Reg#(Word) wordMask <- mkReg(0);
 
-	mkConnection(stimMem.portA.response, toPut(stimFromMem));
+	//mkConnection(stimMem.portA.response, toPut(stimFromMem));
+    /*(* fire_when_enabled *)
+    rule askshjasgsahsahgh;
+        let data <- stimMem.portA.response.get;
+        stimFromMem.enq(data);
+    endrule*/
 
 	(* fire_when_enabled *)
 	rule peekAcqFifo;
@@ -164,7 +169,8 @@ module mkAcqSys(AcqSys);
 
 	(* fire_when_enabled *)
 	rule stimLoadMem(stimRate.ticked);
-		stimOut[1] <= stimFromMem.first;
+        let data <- stimMem.portA.response.get;
+		stimOut[1] <= data;//stimFromMem.first;
 		stimFromMem.deq;
 	endrule
 
@@ -218,6 +224,7 @@ module mkAcqSys(AcqSys);
 			datain: ?,
 			responseOnWrite: False
 		});
+        stimFromMem.enq(truncate(stimIndex));
 		wordMatched <= stimIndex + 1 < stimMemSize;
 		stimIndex <= stimIndex + 1;
 	endrule
