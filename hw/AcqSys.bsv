@@ -89,9 +89,9 @@ module mkAcqSys(AcqSys);
 							led.errorClear;
 							acqFifo.clear;
 							stimFifo.clear;
-							word[1] <= 0;
-							stimMemSize <= 0;
-							stimOut[2] <= 0;
+							//word[1] <= 0;
+							//stimMemSize <= 0;
+							//stimOut[2] <= 0;
 						end
 					endaction
 				tagged AvalonRequest{addr: 0, data: .*, command: Read}:

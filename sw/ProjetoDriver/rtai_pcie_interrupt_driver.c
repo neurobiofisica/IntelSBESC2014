@@ -168,10 +168,10 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
     iowrite32(200000, acq_base + ACQ_BOUNDPERIOD);
     
     // Word to match
-    iowrite32(1, acq_base + ACQ_MATCHWORD);
+    iowrite32(0, acq_base + ACQ_MATCHWORD);
     
     // Word valid-bit mask
-    iowrite32(0xffffffff, acq_base + ACQ_WORDMASK);
+    iowrite32(0x3, acq_base + ACQ_WORDMASK);
     
     // Write a sample brief stimulus
     for(i = 0; i < 1024; i++)
