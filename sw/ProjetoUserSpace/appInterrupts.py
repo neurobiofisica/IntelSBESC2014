@@ -74,7 +74,7 @@ def start(handlers, data_till_now):
         rawts = (data >> 32) 
         ts = float(rawts) / ticks_per_second
 
-        if first_time == None and ((ts & 0x100) != 0):
+        if first_time == None and ((flags & 0x100) != 0):
             first_time = ts
 
         # Dispatch to handlers
