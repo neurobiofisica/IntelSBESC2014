@@ -30,11 +30,6 @@
 #define ACQ_CHANNELFLG  0x04
 #define ACQ_TIMESTAMP   0x08
 #define ACQ_STIM        0x0c
-#define ACQ_BOUNDPERIOD 0x10
-#define ACQ_MATCHWORD   0x14
-#define ACQ_WORDMASK    0x18
-#define ACQ_BRIEFSTIMSZ 0x1c
-#define ACQ_BRIEFSTIM   0x2000    
 
 // Invalid flag from channels (empty FIFO)
 #define INVALID_FLAG    0x80000000
@@ -160,32 +155,11 @@ static int pci_probe(struct pci_dev *dev, const struct pci_device_id *id) {
         rt_printk("pcie_interrupt_driver: request_irq failed!");
         return retval;
     }
+		
+    rt_startup_irq(dev->irq);
 
     // Enable Acquisition
     iowrite32(0x1, acq_base + ACQ_STARTED);
-    
-    // Bin boundary period = 200000 * 10ns
-    iowrite32(200000, acq_base + ACQ_BOUNDPERIOD);
-    
-    // Word to match
-    iowrite32(0, acq_base + ACQ_MATCHWORD);
-    
-    // Word valid-bit mask
-    iowrite32(0x3, acq_base + ACQ_WORDMASK);
-    
-    // Write a sample brief stimulus
-    for(i = 0; i < 1024; i++)
-        iowrite32(((i&1)==0) ? 0x01 : 0x80, acq_base + ACQ_BRIEFSTIM + 4*i);
-
-    for(i = 0; i < 1024; i++)
-        rt_printk("%02x,", ioread32(acq_base + ACQ_BRIEFSTIM + 4*i));
-    rt_printk("\n");
-		
-    // Brief stimulus size
-    // Note: setting this to a value != 0 activates the word matcher
-    iowrite32(16, acq_base + ACQ_BRIEFSTIMSZ);
-		
-    rt_startup_irq(dev->irq);
 
     return 0;
 }
