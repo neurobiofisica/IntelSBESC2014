@@ -9,6 +9,7 @@ import CycleCounter::*;
 import ProgrammableCycleCounter::*;
 import AvalonSlave::*;
 import InterruptSender::*;
+import JtagGetPut::*;
 
 typedef Tuple2#(Bit#(NumFlags), TimeStamp) AcqFifoContents;
 
@@ -59,6 +60,10 @@ module mkAcqSys(AcqSys);
 	Array#(Reg#(Word)) word <- mkCReg(2, 0);
 	Reg#(Word) wordToMatch <- mkReg(32'hFFFFFFFF);
 	Reg#(Word) wordMask <- mkReg(0);
+
+	Get#(StimMemAddr) jtag_addr <- mkJtagGet("ADDR", mkFIFOF);
+	Put#(Stim) jtag_data <- mkJtagPut("DATA", mkFIFOF);
+	
 
 	//mkConnection(stimMem.portA.response, toPut(stimFromMem));
     /*(* fire_when_enabled *)
@@ -172,6 +177,23 @@ module mkAcqSys(AcqSys);
         let data <- stimMem.portA.response.get;
 		stimOut[1] <= data;//stimFromMem.first;
 		stimFromMem.deq;
+	endrule
+
+	(*descending_urgency="queryStimMem,jtag_get_addr"*)
+	rule jtag_get_addr;
+		let stimIndex <- jtag_addr.get;
+		stimMem.portA.request.put(BRAMRequest{
+			write: False,
+			address: stimIndex,
+			datain: ?,
+			responseOnWrite: False
+		});
+	endrule
+
+	(*descending_urgency="stimLoadMem,jtag_put_data"*)
+	rule jtag_put_data;
+		let data <- stimMem.portA.response.get;
+		jtag_data.put(data);
 	endrule
 
 	(* fire_when_enabled *)
