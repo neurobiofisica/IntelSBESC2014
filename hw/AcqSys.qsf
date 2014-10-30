@@ -5,13 +5,12 @@
 set_global_assignment -name FAMILY "Cyclone IV GX"
 set_global_assignment -name DEVICE EP4CGX150DF31C7
 set_global_assignment -name TOP_LEVEL_ENTITY "AcqSys"
-set_global_assignment -name ORIGINAL_QUARTUS_VERSION "13.1"
-set_global_assignment -name LAST_QUARTUS_VERSION "13.1"
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION 13.1
+set_global_assignment -name LAST_QUARTUS_VERSION 14.0
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "11:34:45 OCTOBER 23,2014"
 set_global_assignment -name DEVICE_FILTER_PACKAGE FBGA
 set_global_assignment -name DEVICE_FILTER_PIN_COUNT 896
 set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 7
-set_global_assignment -name SDC_FILE AcqSys.SDC
 
 #============================================================
 # CLOCK
@@ -97,7 +96,7 @@ set_instance_assignment -name IO_STANDARD "2.5 V" -to KEY[3]
 # PCIe
 #============================================================
 set_location_assignment PIN_V15 -to PCIE_REFCLK_P
-set_instance_assignment -name IO_STANDARD "HCSL" -to PCIE_REFCLK_P
+set_instance_assignment -name IO_STANDARD HCSL -to PCIE_REFCLK_P
 set_location_assignment PIN_C29 -to PCIE_WAKE_N
 set_instance_assignment -name IO_STANDARD "2.5 V" -to PCIE_WAKE_N
 set_location_assignment PIN_A4 -to PCIE_PERST_N
@@ -197,3 +196,30 @@ set_instance_assignment -name IO_STANDARD "2.5 V" -to FAN_CTRL
 # End of pin assignments by Terasic System Builder
 #============================================================
 
+
+set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE SPEED
+set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
+set_global_assignment -name FLOW_ENABLE_RTL_VIEWER ON
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
+set_global_assignment -name PHYSICAL_SYNTHESIS_ASYNCHRONOUS_SIGNAL_PIPELINING ON
+set_global_assignment -name PHYSICAL_SYNTHESIS_COMBO_LOGIC ON
+set_global_assignment -name PHYSICAL_SYNTHESIS_EFFORT EXTRA
+set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_DUPLICATION ON
+set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_RETIMING ON
+set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name QIP_FILE PCIe_AvalonBSV/synthesis/PCIe_AvalonBSV.qip
+set_global_assignment -name ENABLE_CONFIGURATION_PINS OFF
+set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
+set_global_assignment -name USE_CONFIGURATION_DEVICE ON
+set_global_assignment -name FORCE_CONFIGURATION_VCCIO ON
+set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -rise
+set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -fall
+set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -rise
+set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -fall
+set_global_assignment -name ACTIVE_SERIAL_CLOCK FREQ_40MHZ
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

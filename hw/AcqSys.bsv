@@ -190,7 +190,7 @@ module mkAcqSys(AcqSys);
 		channelFlags[1] <= channelFlags[1] | flagIn;
 	endrule
 
-	(* fire_when_enabled *)
+	(* fire_when_enabled, no_implicit_conditions *)
 	rule wordUpdate(acqStarted && !wordMatched && binBoundary.ticked);
 		let b = asReg(wordBit[0]);
 		let updword = (word[0] << 1) | extend(b);
