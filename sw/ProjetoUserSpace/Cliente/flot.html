@@ -20,7 +20,6 @@ $(function () {
     function ProcessData() {
         // Attributes
         this.last_timestamp = Array.apply(null, new Array(NChan)).map(Number.prototype.valueOf,-1);
-        this.first_timestamp = -1;
         this.isi = Array.apply(null, new Array(NChan)).map(Number.prototype.valueOf,0);
         this.cbuffer = new Array()
         this.len = Array.apply(null, new Array(NChan)).map(Number.prototype.valueOf,0);
@@ -76,7 +75,7 @@ $(function () {
             //self.graficos[channel].setupGrid();
             //self.graficos[channel].draw();
 
-            var relTS = self.cbuffer[channel].last()[0] - self.first_timestamp;
+            var relTS = self.cbuffer[channel].last()[0];
             if (Math.floor( relTS / stimLen) != self.stimCounter) {
                 flag=true;
             };
@@ -103,10 +102,6 @@ $(function () {
         // Methods
         this.update = function (flags, timestamp) {
             var d1 =  new $.Deferred();
-            if (this.first_timestamp == -1) {
-                this.first_timestamp = timestamp
-            };
-
             for (var i=0; i<=NChan; i++) {
                 if ( flags & (1 << i) ) {
                     if (this.last_timestamp[i] == -1) {
@@ -142,9 +137,13 @@ $(function () {
 
     socket.onmessage = function (event) {
         var data = JSON.parse(event.data);
-        var flags = data[0];
-        var timestamp = data[1];
-        processData.update(flags,timestamp);
+        if (data instanceof Array) {
+            for (var i in data_arr) {
+                var flags = data[i][0];
+                var timestamp = data[i][1];
+                processData.update(flags,timestamp);
+            }
+        }
     };
 
     socket.onclose = function() {
