@@ -138,7 +138,7 @@ $(function () {
     socket.onmessage = function (event) {
         var data = JSON.parse(event.data);
         if (data instanceof Array) {
-            for (var i in data_arr) {
+            for (var i in data) {
                 var flags = data[i][0];
                 var timestamp = data[i][1];
                 processData.update(flags,timestamp);
