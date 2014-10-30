@@ -33,6 +33,20 @@ def fifo_send(devnode, data):
     os.write(fd, data)
     os.close(fd)
 
+def send_brief_stimulus(positions):
+	assert(len(positions) <= 4096)
+    posdata = ''.join([struct.pack('<B', pos) for pos in positions])
+    fifo_send(__FIFO_ARG__, struct.pack('<I', len(posdata)) + posdata)
+    fifo_send(__FIFO_CMD__, struct.pack('<I', 3))
+
+def send_pattern(pattern, binsize):
+    assert(len(pattern) <= 64)
+    pattern_mask = (1<<len(pattern))-1
+    pattern_bits = int(pattern, 2)
+    # take care! struct.pack here must have alignment=none
+    fifo_send(__FIFO_ARG__, struct.pack('<IQQ', binsize, pattern_bits, pattern_mask))
+    fifo_send(__FIFO_CMD__, struct.pack('<I', 4))
+
 '''def menu_window():
     global msg
     msg = QMessageBox(QMessageBox.Information, "Send command", "")
@@ -47,10 +61,11 @@ def fifo_send(devnode, data):
 '''
 def start(handlers, data_till_now):
     """ Initialize FIFOs and add the given receivers. """
-    global __FIFO_DAT__
-    global __recv_notifier__
 
     # Start acquisition
+    send_brief_stimulus(256*[0x80,0x01])
+    send_pattern('11011011', 1)
+    
     print("Starting acquisition...")
     fifo_send(__FIFO_CMD__, struct.pack('<I', __START_ACQ__))
 
