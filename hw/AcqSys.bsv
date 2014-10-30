@@ -60,7 +60,7 @@ module mkAcqSys(AcqSys);
 	Reg#(Word) wordToMatch <- mkReg(32'hFFFFFFFF);
 	Reg#(Word) wordMask <- mkReg(0);
 
-	Put#(Stim) fifinho <- mkJtagPut("FIFI", mkSizedFIFOF(1000000));
+	Get#(StimMemAddr) fifinho <- mkJtagGet("FIFI", mkFIFOF);
 
 	(* fire_when_enabled *)
 	rule peekAcqFifo;
@@ -68,7 +68,7 @@ module mkAcqSys(AcqSys);
 	endrule
 
 	(* fire_when_enabled *)
-	rule answerStimMemRead(!acqStarted);
+	rule answerStimMemRead;
 		let resp <- stimMem.portA.response.get;
 		avalon.busClient.response.put(extend(resp));
 		stimMemPendRead.deq;
@@ -139,7 +139,7 @@ module mkAcqSys(AcqSys);
 				tagged AvalonRequest{addr: .*, data: .*, command: Read}:
 					avalon.busClient.response.put(32'hBADC0FFE);
 			endcase
-		end else if(!acqStarted) begin
+		end else begin
 			if(cmd.command == Read)
 				stimMemPendRead.enq(?);
 			stimMem.portA.request.put(BRAMRequest{
@@ -148,9 +148,6 @@ module mkAcqSys(AcqSys);
 				datain: truncate(cmd.data),
 				responseOnWrite: False
 			});
-		end else begin
-            if(cmd.command == Read)
-				avalon.busClient.response.put(32'hBADC0FFE);
 		end
 	endrule
 
@@ -166,10 +163,9 @@ module mkAcqSys(AcqSys);
 	endrule
 
 	(* fire_when_enabled *)
-	rule stimLoadMem(acqStarted && stimRate.ticked);
-        let data <- stimMem.portA.response.get;
+	rule stimLoadMem(stimRate.ticked);
+        let data <- stimMem.portB.response.get;
 		stimOut[1] <= data;
-		fifinho.put(data);
 	endrule
 
 	(* fire_when_enabled *)
@@ -216,14 +212,25 @@ module mkAcqSys(AcqSys);
 
 	(* fire_when_enabled *)
 	rule queryStimMem(acqStarted && wordMatched);
-		stimMem.portA.request.put(BRAMRequest{
+/*		stimMem.portB.request.put(BRAMRequest{
 			write: False,
 			address: truncate(stimIndex),
 			datain: ?,
 			responseOnWrite: False
-		});
+		});*/
 		wordMatched <= stimIndex + 1 < stimMemSize;
 		stimIndex <= stimIndex + 1;
+	endrule
+
+	(*fire_when_enabled*)
+	rule fifinhoza;
+		let addr <- fifinho.get;
+		stimMem.portB.request.put(BRAMRequest{
+			write: False,
+			address: addr,
+			datain: ?,
+			responseOnWrite: False
+		});
 	endrule
 
 	method Stim stimuli = stimOut[0];
