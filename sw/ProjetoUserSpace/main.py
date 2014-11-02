@@ -17,9 +17,20 @@ def send_all(a):
             traceback.print_exc()
 
 def clear_acq():
-    global first_time, data_till_now
+    global first_time, data_till_now, last_stim_sent
+    last_stim_sent = -10*stim_chunk
     first_time, data_till_now = None, []
     send_all({"kind": "clear"})
+
+zigzag_stim = [
+    12, 6, 3, 3, 6, 12, 24, 48, 96, 192, 192, 96, 48, 24, 12, 6, 3, 3, 6,
+    12, 24, 48, 96, 192, 192, 96, 48, 24, 12, 6, 3, 3, 6, 12, 24, 48, 96,
+    192, 192, 96, 48, 24, 12, 6, 3, 3, 6, 12, 24, 48, 96, 192, 192, 96,
+    48, 24, 12, 6, 3, 3, 6, 12, 24, 48, 96, 192, 192, 96, 48, 24, 12, 6,
+    3, 3, 6, 12, 24, 48, 96, 192, 192, 96, 48, 24, 12, 6, 3, 3, 6, 12, 24,
+    48, 96, 192, 192, 96, 48, 24, 12, 6
+]
+stim_data_arr = []
 
 pattern, binsize = '', 1
 
@@ -38,6 +49,8 @@ class ControlHandler(tornado.web.RequestHandler):
         elif command == 'stop':
             fifo_send(__FIFO_CMD__, struct.pack('<I', __STOP_ACQ__))
         elif command == 'zigzag':
+            global stim_data_arr
+            stim_data_arr = list(zigzag_stim)
             fifo_send(__FIFO_ARG__, struct.pack('<I', 0))  # STIM_ZIGZAG
             fifo_send(__FIFO_CMD__, struct.pack('<I', __LSTIM_TYPE__))
         elif command == 'binsize':
@@ -51,6 +64,8 @@ class ControlHandler(tornado.web.RequestHandler):
         elif command == 'briefstim':
             send_brief_stimulus(body)
         elif command == 'longstim':
+            global stim_data_arr
+            stim_data_arr = list(body)
             fifo_send(__FIFO_CMD__, struct.pack('<I', __CLR_FIFO_STM__))
             fifo_send(__FIFO_STM__, ''.join([struct.pack('<B', x) for x in body]))
             fifo_send(__FIFO_ARG__, struct.pack('<I', 1))  # STIM_FIFO

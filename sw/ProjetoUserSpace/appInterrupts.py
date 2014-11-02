@@ -24,7 +24,11 @@ __NUM_SPK__ = 8
 
 ticks_per_second = 1.e6
 
+time_per_stim_chunk = 10  # seconds per chunk
+stim_chunk = 100  # samples per chunk
+
 first_time = None
+last_stim_sent = -10*stim_chunk
 spkdest = []
 
 def close_save_files():
@@ -112,7 +116,24 @@ def start(handlers, data_till_now):
         # Dispatch to handlers
         # Objects of a class that contains the 'process' method
         if flags != 0x100:
-            arr_data = [flags, ts - first_time]
+            ts -= first_time
+
+            global stim_data_arr, last_stim_sent
+            if ts - last_stim_sent > 10:
+                json_data = json.dumps({
+                    "kind": "stim",
+                    "data": stim_data_arr[:stim_chunk]
+                })
+                for x in handlers:
+                    try:
+                        x.process(json_data)
+                    except:
+                        traceback.print_exc()
+                if len(stim_data_arr) > stim_chunk:
+                    stim_data_arr = stim_data_arr[stim_chunk:]
+                last_stim_sent = ts
+
+            arr_data = [flags, ts]
             data_till_now.append(  arr_data  )
             json_data = json.dumps( [ arr_data ] )
             for x in handlers:
