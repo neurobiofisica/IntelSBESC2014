@@ -3,7 +3,7 @@ import os, sys, time, json, random
 import tornado.ioloop as ioloop
 import tornado.web as web
 import tornado.websocket as websocket
-from tornado.escape import json_encode
+from tornado.escape import json_encode, json_decode
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -31,7 +31,10 @@ class AcqWebSocket(websocket.WebSocketHandler):
 class ControlHandler(web.RequestHandler):
     @web.removeslash
     def put(self, command):
-        logging.log(logging.INFO, '<%s> command: %s' % (repr(self), command))
+        body = self.request.body
+        body = json_decode(body) if body else None
+        logging.log(logging.INFO, '<%s> command <%s>: %s' %
+                    (repr(self), command, repr(body)))
 
 t0 = 0
 def send_data_test():
