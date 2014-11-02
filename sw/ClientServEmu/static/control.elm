@@ -159,5 +159,7 @@ main = (\(w,h) httpResp' binSizeElem binSize' wordToMatchElem wordToMatch' ->
                 |> container ifcWidth 40 middle
         ]
     ]) <~ Window.dimensions ~ httpResp
-        ~ field (String.all Char.isDigit ) binSize     ~ binSize.signal
-        ~ field (String.all (charIn "01")) wordToMatch ~ wordToMatch.signal
+        ~ field (String.all Char.isDigit) binSize ~ binSize.signal
+        ~ field (\s -> String.all (charIn "01") s
+                       && String.length s <= 64)
+                wordToMatch ~ wordToMatch.signal
