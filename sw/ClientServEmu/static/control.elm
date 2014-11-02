@@ -155,7 +155,7 @@ main = (\(w,h) httpResp' binSizeElem binSize' wordToMatchElem wordToMatch' ->
                 wordToMatchElem |> container 200 30 middle,
                 button 30 30 bgray "Set" cmdArg.handle ("/control/word", wordToMatch'.string)
             ] |> container ifcWidth 30 middle,
-            button 60 30 bgray "Disable" cmd.handle "/control/pattern_disable"
+            button 60 30 bgray "Disable" cmd.handle "/control/disablefeedback"
                 |> container ifcWidth 40 middle
         ]
     ]) <~ Window.dimensions ~ httpResp
