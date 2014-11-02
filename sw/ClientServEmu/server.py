@@ -37,6 +37,8 @@ class ControlHandler(web.RequestHandler):
                     (repr(self), command, repr(body)))
         if command == 'start':
             clear_acq()
+        else:
+            raise ValueError('not implemented')
 
 def clear_acq():
     global t0, data_till_now

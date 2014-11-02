@@ -25,6 +25,23 @@ __NUM_SPK__ = 8
 ticks_per_second = 1.e6
 
 first_time = None
+spkdest = []
+
+def close_save_files():
+    for f in spkdest:
+        try: f.close()
+        except: traceback.print_exc()
+
+def open_save_files():
+    global spkdest
+    close_save_files()
+    # Open save files
+    dest = '/home/neurostorm/acquisitions/' + time.strftime('%Y%m%d-%H%M%S')
+    os.makedirs(dest)
+    os.chdir(dest)
+    spkdest = []
+    for i in range(1, __NUM_SPK__+1):
+        spkdest.append(open('spike%d.dat'%i, 'w'))
 
 def fifo_send(devnode, data):
     sys.stderr.write('fifo_send devnode=%s, data=%s\n' % (devnode, data.encode('hex')))
@@ -41,8 +58,13 @@ def send_brief_stimulus(positions):
 
 def send_pattern(pattern, binsize):
     assert(len(pattern) <= 64)
-    pattern_mask = (1<<len(pattern))-1
-    pattern_bits = int(pattern, 2)
+    if pattern != '':
+        pattern_mask = (1<<len(pattern))-1
+        pattern_bits = int(pattern, 2)
+    else:
+        # disable pattern match
+        pattern_mask = 0
+        pattern_bits = 0xff
     # take care! struct.pack here must have alignment=none
     fifo_send(__FIFO_ARG__, struct.pack('<IQQ', binsize, pattern_bits, pattern_mask))
     fifo_send(__FIFO_CMD__, struct.pack('<I', 4))
@@ -62,23 +84,11 @@ def send_pattern(pattern, binsize):
 def start(handlers, data_till_now):
     """ Initialize FIFOs and add the given receivers. """
 
-    # Start acquisition
-    send_brief_stimulus(4*[0x80,0x01])
-    send_pattern('1101', 1)
-    
-    print("Starting acquisition...")
-    fifo_send(__FIFO_CMD__, struct.pack('<I', __START_ACQ__))
-
     # Open Menu Window
     # menu_window()
 
-     # Open save files
-    dest = '/home/neurostorm/acquisitions/' + time.strftime('%Y%m%d-%H%M%S')
-    os.makedirs(dest)
-    os.chdir(dest)
-    spkdest = []
-    for i in range(1, __NUM_SPK__+1):
-        spkdest.append(open('spike%d.dat'%i, 'w'))
+    # Open save files
+    open_save_files()
 
     fd = os.open(__FIFO_DAT__, os.O_RDONLY)
     def callback(fd_, event):
@@ -93,7 +103,7 @@ def start(handlers, data_till_now):
 
         # Interpret data
         flags = (data & 0xffffffff)
-        rawts = (data >> 32) 
+        rawts = (data >> 32)
         ts = float(rawts) / ticks_per_second
 
         if first_time == None:
@@ -108,15 +118,15 @@ def start(handlers, data_till_now):
             for x in handlers:
                 try:
                     x.process(json_data)
-                except: 
+                except:
                     traceback.print_exc()
-        
+
         # Save data
         # Nota: Modifiquei pois nao ha a entrada da tela!!
         for i in range(__NUM_SPK__):
             if ((1 << i) & flags) != 0:
                 spkdest[i].write('%u\n'%rawts)
-    
+
     io_loop = tornado.ioloop.IOLoop.instance()
     io_loop.add_handler(fd, callback, io_loop.READ)
     return io_loop
