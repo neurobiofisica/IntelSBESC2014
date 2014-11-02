@@ -35,15 +35,21 @@ class ControlHandler(web.RequestHandler):
         body = json_decode(body) if body else None
         logging.log(logging.INFO, '<%s> command <%s>: %s' %
                     (repr(self), command, repr(body)))
+        if command == 'start':
+            clear_acq()
+
+def clear_acq():
+    global t0, data_till_now
+    t0, data_till_now = 0, []
+    AcqWebSocket.write_all(json_encode({"kind": "clear"}))
 
 t0 = 0
 def send_data_test():
     global t0, data_till_now
     ts = time.time() - t0
     if ts > 300:
+        clear_acq()
         t0, ts = time.time(), 0
-        data_till_now = []
-        AcqWebSocket.write_all(json_encode({"kind": "clear"}))
     datum = [random.randint(0,(1<<10)-1),ts]
     AcqWebSocket.write_all(json_encode([datum]))
     data_till_now.append(datum)
@@ -63,6 +69,6 @@ application = web.Application([
 
 if __name__ == '__main__':
     application.listen(8888)
-    ioloop.PeriodicCallback(send_data_test, 100).start()
+    ioloop.PeriodicCallback(send_data_test, 10).start()
     ioloop.PeriodicCallback(send_stim_test, 4000).start()
     ioloop.IOLoop.instance().start()
