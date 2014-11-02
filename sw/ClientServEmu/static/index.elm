@@ -8,6 +8,9 @@ import Json
 import List
 import Dict
 
+rasterXRange : Float 
+rasterXRange = 10
+
 type DataList = [(Int,Float)]
 
 lastStim : Signal (Maybe [Int])
@@ -47,7 +50,7 @@ extractStim json = case dicFromJson json of
 
 socket : Signal (Maybe Json.Value)
 socket = Json.fromString <~
-    (WebSocket.connect "ws://192.168.0.1:8888/socket"
+    (WebSocket.connect "ws://localhost:8888/socket"
     <| constant "")
 
 timesFromData : Int -> DataList -> [(Bool,Float)]
@@ -117,7 +120,7 @@ updatePlot func inp cur =
 plotRaster : PlotFunc
 plotRaster (w,h) times =
     let vspacing = 5.0
-        xrange = 5.0
+        xrange = rasterXRange
         border = 5.0
         w' = (toFloat w) - 2*border
         xoff = border - (toFloat w)/2
