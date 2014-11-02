@@ -28,6 +28,11 @@ class AcqWebSocket(websocket.WebSocketHandler):
         for listener in AcqWebSocket.listeners:
             listener.write_message(message, **kwargs)
 
+class ControlHandler(web.RequestHandler):
+    @web.removeslash
+    def put(self, command):
+        logging.log(logging.INFO, '<%s> command: %s' % (repr(self), command))
+
 t0 = 0
 def send_data_test():
     global t0, data_till_now
@@ -49,11 +54,12 @@ def send_stim_test():
 application = web.Application([
     (r"/()$", web.StaticFileHandler, {'path': os.path.join(static_path, 'index.html')}),
     (r"/socket", AcqWebSocket),
+    (r"/control/(.+)", ControlHandler),
     (r"/(.+)", web.StaticFileHandler, {'path': static_path})
 ])
 
 if __name__ == '__main__':
     application.listen(8888)
-    ioloop.PeriodicCallback(send_data_test, 3).start()
+    ioloop.PeriodicCallback(send_data_test, 100).start()
     ioloop.PeriodicCallback(send_stim_test, 4000).start()
     ioloop.IOLoop.instance().start()

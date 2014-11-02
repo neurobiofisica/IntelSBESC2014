@@ -98,7 +98,7 @@ cmd : Input.Input String
 cmd = Input.input ""
 
 binSize : Input.Input Field.Content
-binSize = Input.input Field.noContent
+binSize = Input.input <| Field.Content "1" (Field.Selection 0 0 Field.Forward)
 
 wordToMatch : Input.Input Field.Content
 wordToMatch = Input.input Field.noContent
@@ -126,7 +126,7 @@ main = (\(w,h) httpResp' binSizeElem binSize' wordToMatchElem wordToMatch' ->
         httpResp' |> container ifcWidth 16 middle,
         color lightGray <| container ifcWidth 50 middle <| flow right [
             button 80 30 (rgb 180 255 180) "Start" cmd.handle "/control/start",
-            spacer 80 10,
+            spacer 20 30,
             button 80 30 (rgb 255 180 180) "Stop"  cmd.handle "/control/stop"
         ],
         spacer ifcWidth 10,
