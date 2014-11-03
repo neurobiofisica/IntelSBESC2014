@@ -18,7 +18,7 @@ def send_all(a):
 
 def clear_acq():
     global first_time, data_till_now, last_stim_sent
-    last_stim_sent = -10*stim_chunk
+    last_stim_sent = -10*time_per_stim_chunk
     first_time, data_till_now = None, []
     send_all({"kind": "clear"})
 
@@ -30,7 +30,6 @@ zigzag_stim = [
     3, 3, 6, 12, 24, 48, 96, 192, 192, 96, 48, 24, 12, 6, 3, 3, 6, 12, 24,
     48, 96, 192, 192, 96, 48, 24, 12, 6
 ]
-stim_data_arr = []
 
 pattern, binsize = '', 1
 

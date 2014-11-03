@@ -28,7 +28,8 @@ time_per_stim_chunk = 10  # seconds per chunk
 stim_chunk = 100  # samples per chunk
 
 first_time = None
-last_stim_sent = -10*stim_chunk
+last_stim_sent = -10*time_per_stim_chunk
+stim_data_arr = []
 spkdest = []
 
 def close_save_files():
@@ -119,7 +120,7 @@ def start(handlers, data_till_now):
             ts -= first_time
 
             global stim_data_arr, last_stim_sent
-            if ts - last_stim_sent > 10:
+            if ts - last_stim_sent > time_per_stim_chunk:
                 json_data = json.dumps({
                     "kind": "stim",
                     "data": stim_data_arr[:stim_chunk]
