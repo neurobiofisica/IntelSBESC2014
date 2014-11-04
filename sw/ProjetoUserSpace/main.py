@@ -36,6 +36,8 @@ pattern, binsize = '', 1
 class ControlHandler(tornado.web.RequestHandler):
     @tornado.web.removeslash
     def put(self, command):
+        global pattern, binsize
+
         body = self.request.body
         body = json.loads(body) if body else None
         print 'command <%s>: %s' % (command, repr(body))
@@ -56,7 +58,7 @@ class ControlHandler(tornado.web.RequestHandler):
             binsize = int(body)
             send_pattern(pattern, binsize)
         elif command == 'word':
-            word = str(body)
+            pattern = str(body)
             send_pattern(pattern, binsize)
         elif command == 'disablefeedback':
             send_pattern('', 1)
